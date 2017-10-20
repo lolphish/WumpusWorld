@@ -17,14 +17,29 @@
 //                be lost when the tournament runs your code.
 // ======================================================================
 
+import java.util.ArrayList;
+
 public class MyAI extends Agent
 {
+  	private enum Direction
+    {
+  		NORTH,
+      	EAST,
+      	SOUTH,
+      	WEST
+    }
+  
+  	private Direction direction;
+  	private ArrayList<ArrayList<Double>> map;
+  
 	public MyAI ( )
 	{
 		// ======================================================================
 		// YOUR CODE BEGINS
 		// ======================================================================
-		
+        direction = Direction.EAST;
+      	ArrayList<ArrayList<Double>> map = new ArrayList<>();
+		map.add(new ArrayList<Double>());
 		// ======================================================================
 		// YOUR CODE ENDS
 		// ======================================================================
