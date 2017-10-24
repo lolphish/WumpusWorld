@@ -9,7 +9,7 @@ public class Point {
 	}
 	
 	public Point() {
-		this(1, 1);
+		this(0, 0);
 	}
 	
 	@Override
@@ -24,6 +24,10 @@ public class Point {
 	public void setX(int x) {
 		this.x = x;
 	}
+	
+	public void addX(int steps) {
+		x += steps;
+	}
 
 	public int getY() {
 		return y;
@@ -31,6 +35,10 @@ public class Point {
 
 	public void setY(int y) {
 		this.y = y;
+	}
+	
+	public void addY(int steps) {
+		y += steps;
 	}
 	
 	public void set(int x, int y) {
