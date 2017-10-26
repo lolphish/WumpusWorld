@@ -40,9 +40,11 @@ public class MyAI extends Agent
   
   	private Direction direction;
   	private Point currentPoint;
-  	private ArrayList<ArrayList<Double>> map;
-  	private Stack<Point> path;
-  
+  	private ArrayList<ArrayList<Tile>> map;
+  	private Stack<Action> path;
+  	private boolean moveForward;
+    private int topWall;
+  	private int rightWall;
 	public MyAI ( )
 	{
 		// ======================================================================
@@ -50,9 +52,11 @@ public class MyAI extends Agent
 		// ======================================================================
       	direction = Direction.EAST;
       	currentPoint = new Point();		// initialized to (1, 1)
-      	ArrayList<ArrayList<Double>> map = new ArrayList<>();
-		map.add(new ArrayList<Double>());
-      
+        topWall = Integer.MAX_VALUE;
+		rightWall = Integer.MAX_VALUE;
+		map = new ArrayList<>();
+		map.add(new ArrayList<Tile>());
+      	moveForward = false;
       	path = new Stack<>();
 		// ======================================================================
 		// YOUR CODE ENDS
@@ -71,6 +75,12 @@ public class MyAI extends Agent
 		// ======================================================================
 		// YOUR CODE BEGINS
 		// ======================================================================
+		Action action = Action.FORWARD;
+      	if (moveForward) {
+      		moveForward = false;
+          	return action;
+        }
+      
         if (stench) {
 
         }
@@ -87,8 +97,8 @@ public class MyAI extends Agent
 
         }
 		
-        step(Direction.EAST);
-		return Action.FORWARD;
+        path.push(action);
+		return action;
 		// ======================================================================
 		// YOUR CODE ENDS
 		// ======================================================================
@@ -96,12 +106,7 @@ public class MyAI extends Agent
 	
 	// ======================================================================
 	// YOUR CODE BEGINS
-	// ======================================================================
-    private void initializeDirectionMap() {
-      	map = new ArrayList<>();
-      	map.add(new ArrayList<Double>());
-    }
-  
+	// ======================================================================  
     private int getUpperBound() {
       	return map.get(0).size();
     }
@@ -109,40 +114,42 @@ public class MyAI extends Agent
     private int getRightBound() {
           return map.size();
     }
-  
+    
     private void step(Direction direction) {
-        switch (direction) {
-          	case NORTH:
-          		// if you move up, append to current ArrayList
-          		if ((currentPoint.getY()+1) >= getUpperBound()) {
-          			map.get(currentPoint.getY()).add(UNEXPLORED);
-                }
-          		currentPoint.addY(1);
-          		break;
-          		
-          	case SOUTH:
-          		currentPoint.addY(-1);
-          		break;
-          		
-          	case EAST:
-          		// append a new ArrayList to the outer array
-          		if (currentPoint.getX()+1 >= getRightBound())
-                {
-                  	map.add(new ArrayList<Double>());
-                  	for (int i = 0; i < getUpperBound(); ++i)
-                    	map.get(currentPoint.getX()+1).add(UNEXPLORED);
-                }
-          		currentPoint.addX(1);
-          		break;
-          		
-          	case WEST:
-          		currentPoint.addX(-1);
-          		break;
-        }
-      	map.get(currentPoint.getX()).set(currentPoint.getY(), EMPTY);
-      	// save the (safe) point you just moved onto
-      	path.push(currentPoint);
+	  
     }
+  
+//    private void step(Direction direction) {
+//        switch (direction) {
+//          	case NORTH:
+//          		// if you move up, append to current ArrayList
+//          		if ((currentPoint.getY()+1) >= getUpperBound()) {
+//          			map.get(currentPoint.getY()).add(UNEXPLORED);
+//                }
+//          		currentPoint.addY(1);
+//          		break;
+//          		
+//          	case SOUTH:
+//          		currentPoint.addY(-1);
+//          		break;
+//          		
+//          	case EAST:
+//          		// append a new ArrayList to the outer array
+//          		if (currentPoint.getX()+1 >= getRightBound())
+//                {
+//                  	map.add(new ArrayList<Double>());
+//                  	for (int i = 0; i < getUpperBound(); ++i)
+//                    	map.get(currentPoint.getX()+1).add(UNEXPLORED);
+//                }
+//          		currentPoint.addX(1);
+//          		break;
+//          		
+//          	case WEST:
+//          		currentPoint.addX(-1);
+//          		break;
+//        }
+//      	map.get(currentPoint.getX()).set(currentPoint.getY(), EMPTY);
+//    }
 
 	// ======================================================================
 	// YOUR CODE ENDS
