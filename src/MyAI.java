@@ -18,6 +18,8 @@
 // ======================================================================
 
 import java.util.ArrayList;
+import java.util.LinkedList;
+import java.util.Queue;
 import java.util.Stack;
 
 
@@ -42,9 +44,11 @@ public class MyAI extends Agent
   	private Point currentPoint;
   	private ArrayList<ArrayList<Tile>> map;
   	private Stack<Action> path;
-  	private boolean moveForward;
+  	private Queue<Action> actions;
     private int topWall;
   	private int rightWall;
+  	private boolean hasArrow;
+  	
 	public MyAI ( )
 	{
 		// ======================================================================
@@ -54,10 +58,12 @@ public class MyAI extends Agent
       	currentPoint = new Point();		// initialized to (1, 1)
         topWall = Integer.MAX_VALUE;
 		rightWall = Integer.MAX_VALUE;
+		hasArrow = true;
+		
 		map = new ArrayList<>();
 		map.add(new ArrayList<Tile>());
-      	moveForward = false;
       	path = new Stack<>();
+      	actions = new LinkedList<>();
 		// ======================================================================
 		// YOUR CODE ENDS
 		// ======================================================================
@@ -75,14 +81,17 @@ public class MyAI extends Agent
 		// ======================================================================
 		// YOUR CODE BEGINS
 		// ======================================================================
+		if (!actions.isEmpty()) {
+			return actions.remove();
+		}
+		
 		Action action = Action.FORWARD;
-      	if (moveForward) {
-      		moveForward = false;
-          	return action;
-        }
       
         if (stench) {
-
+        		if (hasArrow) {
+        			hasArrow = false;
+        			action = Action.SHOOT;
+        		}
         }
         if (breeze) {
 
@@ -108,15 +117,57 @@ public class MyAI extends Agent
 	// YOUR CODE BEGINS
 	// ======================================================================  
     private int getUpperBound() {
-      	return map.get(0).size();
+    		return -1;
     }
   	
     private int getRightBound() {
-          return map.size();
+    		return -1;
     }
     
     private void step(Direction direction) {
 	  
+    }
+    
+    /* Helper function;
+     * returns Action.TURN_LEFT, and updates the AI's direction.
+     */
+    private Action turnLeft() {
+    		switch (direction) {
+    			case NORTH:
+    				direction = Direction.WEST;
+    				break;
+    			case WEST:
+    				direction = Direction.SOUTH;
+    				break;
+    			case SOUTH:
+    				direction = Direction.EAST;
+    				break;
+    			case EAST:
+    				direction = Direction.NORTH;
+    				break;
+    		}
+    		return Action.TURN_LEFT;
+    }
+    
+    /* Helper function;
+     * returns Action.TURN_RIGHT, and updates the AI's direction.
+     */
+    private Action turnRight() {
+    		switch (direction) {
+    			case NORTH:
+    				direction = Direction.EAST;
+    				break;
+    			case EAST:
+    				direction = Direction.SOUTH;
+    				break;
+    			case SOUTH:
+    				direction = Direction.WEST;
+    				break;
+    			case WEST:
+    				direction = Direction.NORTH;
+    				break;
+    		}
+    		return Action.TURN_RIGHT;
     }
   
 //    private void step(Direction direction) {
