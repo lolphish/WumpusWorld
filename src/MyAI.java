@@ -20,6 +20,7 @@
 import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.Queue;
+import java.util.Random;
 import java.util.Stack;
 
 
@@ -29,6 +30,7 @@ import java.util.Stack;
 
 public class MyAI extends Agent
 {
+  	private static final Random generator = new Random();
   	private static final double UNEXPLORED = -1;
   	private static final double EMPTY = 1;
   
@@ -37,7 +39,8 @@ public class MyAI extends Agent
   		NORTH,
       	EAST,
       	SOUTH,
-      	WEST
+      	WEST,
+      	CLIMB
     }
   
   	private Direction direction;
@@ -54,16 +57,12 @@ public class MyAI extends Agent
 		// ======================================================================
 		// YOUR CODE BEGINS
 		// ======================================================================
-      	direction = Direction.EAST;
       	currentPoint = new Point();		// initialized to (1, 1)
-        topWall = Integer.MAX_VALUE;
-		rightWall = Integer.MAX_VALUE;
 		hasArrow = true;
 		
-		map = new ArrayList<>();
-		map.add(new ArrayList<Tile>());
       	path = new Stack<>();
       	actions = new LinkedList<>();
+      	direction = Direction.EAST;
 		// ======================================================================
 		// YOUR CODE ENDS
 		// ======================================================================
@@ -81,30 +80,47 @@ public class MyAI extends Agent
 		// ======================================================================
 		// YOUR CODE BEGINS
 		// ======================================================================
+        if (glitter) {
+            return Action.GRAB;
+        }
+      
 		if (!actions.isEmpty()) {
 			return actions.remove();
 		}
 		
 		Action action = Action.FORWARD;
       
+        if (stench || breeze) {
+          	// 180, then pop from the stack
+          	actions.clear();
+          	actions.add(turnRight());
+          	actions.add(turnRight());
+            while (!path.empty()) {
+                actions.add(path.pop());
+            }
+        }
+        else {
+            action = getRandomMove();
+        }
+        
         if (stench) {
-        		if (hasArrow) {
-        			hasArrow = false;
-        			action = Action.SHOOT;
-        		}
+            if (hasArrow) {
+                hasArrow = false;
+                action = Action.SHOOT;
+            }
         }
-        if (breeze) {
-
-        }
-        if (glitter) {
-
-        }
-        if (bump) {
-
-        }
-        if (scream) {
-
-        }
+//        if (breeze) {
+//
+//        }
+//        if (glitter) {
+//
+//        }
+//        if (bump) {
+//
+//        }
+//        if (scream) {
+//
+//        }
 		
         path.push(action);
 		return action;
@@ -124,14 +140,11 @@ public class MyAI extends Agent
     		return -1;
     }
     
-    private void step(Direction direction) {
-	  
-    }
-    
     /* Helper function;
      * returns Action.TURN_LEFT, and updates the AI's direction.
      */
     private Action turnLeft() {
+      
     		switch (direction) {
     			case NORTH:
     				direction = Direction.WEST;
@@ -170,6 +183,28 @@ public class MyAI extends Agent
     		return Action.TURN_RIGHT;
     }
   
+    private Action getRandomMove() {
+	    Action action;
+      	int value = generator.nextInt(6);
+        switch (value) {
+        		case 0:
+          		action = turnLeft();
+          		break;
+          	case 1:
+          		action = turnRight();
+          		break;
+          	case 2:
+          	default:
+          		action = Action.FORWARD;
+        }
+      	return action;
+    }
+  
+    private Action backpedal() {
+      	Action last = path.pop();
+      	return last;
+    }
+  
 //    private void step(Direction direction) {
 //        switch (direction) {
 //          	case NORTH:
@@ -205,4 +240,5 @@ public class MyAI extends Agent
 	// ======================================================================
 	// YOUR CODE ENDS
 	// ======================================================================
-}    
+}
+  
