@@ -9,12 +9,26 @@ public class Point {
 	}
 	
 	public Point() {
-		this(0, 0);
+		this(1, 1);
+	}
+	
+	public Point(Point other) {
+		x = other.getX();
+		y = other.getY();
 	}
 	
 	@Override
 	public String toString() {
 		return "Point(" + getX() + ", " + getY() + ")";
+	}
+	
+	@Override
+	public boolean equals(Object other) {
+		if (!(other instanceof Point)) {
+			return false;
+		}
+		Point otherPoint = (Point)other;
+		return getX() == otherPoint.getX() && getY() == otherPoint.getY();
 	}
 
 	public int getX() {
@@ -44,5 +58,9 @@ public class Point {
 	public void set(int x, int y) {
 		setX(x);
 		setY(y);
+	}
+	
+	public boolean atStart() {
+		return getX() == 1 && getY() == 1;
 	}
 }
