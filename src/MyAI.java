@@ -31,10 +31,8 @@ import java.util.Stack;
 public class MyAI extends Agent
 {
   	private static final Random generator = new Random();
-  	private static final double UNEXPLORED = -1;
-  	private static final double EMPTY = 1;
   
-  	private enum Direction
+  	static enum Direction
     {
   		UP,
       	RIGHT,
@@ -44,7 +42,8 @@ public class MyAI extends Agent
   
   	private Direction direction;
   	private Point currentPoint;
-  	private LinkedList<Point> visited;
+  	private Node currentNode;
+  	private Graph cave;
   	private Stack<Action> path;
   	private Queue<Action> actions;
   	private boolean hasArrow;
@@ -56,8 +55,9 @@ public class MyAI extends Agent
 		// YOUR CODE BEGINS
 		// ======================================================================
       	currentPoint = new Point();		// initialized to (1, 1)
-      	visited = new LinkedList<>();
-      	addToVisited(currentPoint);
+      	cave = new Graph();
+      	currentNode = new Node(Node.EMPTY, true);
+      	cave.addNode(currentNode);
       	
 		hasArrow = true;
 		wumpusAlive = true;
@@ -86,15 +86,18 @@ public class MyAI extends Agent
 			wumpusAlive = false;
 		}
 		if (bump) {
-			visited.removeLast();
-			currentPoint = visited.getLast();
-			path.pop();
+			// moveForward() adds a new node
+			// if a bump is perceived, a new node was added when it shouldn't have been
+			// TODO: find a way to fix this
 		}
 		
         if (glitter) {
             return Action.GRAB;
         }
-        if (currentPoint.atStart() && visited.size() > 1) {
+        
+        
+//        if (currentPoint.atStart() && visited.size() > 1) {
+        if (currentNode.isStartingPoint() && cave.size() > 1) {
         		return Action.CLIMB;
         }
       
@@ -104,13 +107,16 @@ public class MyAI extends Agent
 		}
 		
 		Action action;
-//		// attempt to kill the Wumpus
-//		if (stench && hasArrow) {
+		// attempt to kill the Wumpus
+		if (stench && hasArrow) {
 //            hasArrow = false;
 //            return Action.SHOOT;		// return; don't add Action.SHOOT to the path stack
-//        }
-		if (breeze || (stench && wumpusAlive)) {
+        }
+		
+		currentNode.setAcceptanceProbability(Node.EMPTY);
+		if (breeze || stench) {
           	// 180, then pop from the stack
+			currentNode.setAcceptanceProbability(Node.SENSED);
           	return backpedal();
         }
 		else if (bump) {
@@ -195,7 +201,7 @@ public class MyAI extends Agent
     				currentPoint.addX(-1);
     				break;
     		}
-    		addToVisited(currentPoint);
+    		currentNode = cave.addNode(currentNode, direction); 
     		return Action.FORWARD;
     }
   
@@ -227,15 +233,6 @@ public class MyAI extends Agent
     				action = turnRight();
     		}
     		return action;
-    }
-    
-    /* Helper method;
-     * Must invoke Point's copy constructor - 
-     * otherwise, they are passed by reference and Points inside visited
-     * will be updated by currentPoint's method calls.
-     */
-    private void addToVisited(Point point) {
-    		visited.add(new Point(point));
     }
   
     /* Clears all upcoming actions and begins backtracking (literally)
