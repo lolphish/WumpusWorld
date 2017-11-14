@@ -19,50 +19,49 @@ public class Graph {
 	}
 	
 	/*
-	 * If it doesn't exist, adds a new Node relative to the direction the Agent is facing.
-	 * Returns the node added.
-	 * If there already is a node in "from's" direction, does nothing and returns that existing node. 
+	 * If it doesn't exist, adds a new Node relative to the direction the Agent is facing;
+	 *   returns the node added.
+	 * If there already is a node in "from's" direction, does nothing;
+	 *   returns that existing node. 
 	 */
-	public Node addNode(Node from, MyAI.Direction direction) {
-		Edge adjacent = getAdjacentEdge(from, direction);
-		if (adjacent.hasDestination()) {
-			return adjacent.getDestination();
+	public Node addNode(Node origin, MyAI.Direction direction) {
+		Node destination = getAdjacentNode(origin, direction);
+		if (destination != null) {
+			return destination;
 		}
 		
-		Node to = new Node();
-		Edge edge = new Edge(from, to);
-		Edge opposite = new Edge(to, from);
+		destination = new Node();
 		switch (direction) {
 			case UP:
-				from.setAbove(edge);
-				to.setBelow(opposite);
+				origin.setAbove(destination);
+				destination.setBelow(origin);
 				break;
 			case DOWN:
-				from.setBelow(edge);
-				to.setAbove(opposite);
+				origin.setBelow(destination);
+				destination.setAbove(origin);
 				break;
 			case RIGHT:
-				from.setRight(edge);
-				to.setLeft(opposite);
+				origin.setRight(destination);
+				destination.setLeft(origin);
 				break;
 			case LEFT:
-				from.setLeft(edge);
-				to.setRight(opposite);
+				origin.setLeft(destination);
+				destination.setRight(origin);
 				break;
 			default:
 				throw new RuntimeException("unexpected direction");
 		}
-		nodes.add(to);
-		return to;
+		addNode(destination);
+		return destination;
 	}
 	
 	/*
-	 * Returns the adjacent edge relative to from's direction.
+	 * Returns the adjacent node relative to "from's" direction.
 	 * For example, if direction = RIGHT, returns from.right
-	 * (the edge leading to the from's right neighbor).
+	 * (the node leading to the from's right neighbor).
 	 */
-	private Edge getAdjacentEdge(Node from, MyAI.Direction direction) {
-		Edge adjacent;
+	private Node getAdjacentNode(Node from, MyAI.Direction direction) {
+		Node adjacent;
 		switch (direction) {
 			case UP:
 				adjacent = from.getAbove();

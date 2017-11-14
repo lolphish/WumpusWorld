@@ -85,6 +85,7 @@ public class MyAI extends Agent
 		if (scream) {
 			wumpusAlive = false;
 		}
+		
 		if (bump) {
 			// moveForward() adds a new node
 			// if a bump is perceived, a new node was added when it shouldn't have been
@@ -95,8 +96,6 @@ public class MyAI extends Agent
             return Action.GRAB;
         }
         
-        
-//        if (currentPoint.atStart() && visited.size() > 1) {
         if (currentNode.isStartingPoint() && cave.size() > 1) {
         		return Action.CLIMB;
         }
@@ -124,9 +123,10 @@ public class MyAI extends Agent
 			// in the worst case, it will take at least 2 90-degree turns to recover from a bump
 			// but, it would only take 1 180-degree turn
 			action = getRandomTurn();
+			actions.add(action);
 		}
         else {
-            action = getRandomMove();
+        		action = moveForward();
         }
         
 		// track the steps that the Agent has taken,
@@ -205,6 +205,10 @@ public class MyAI extends Agent
     		return Action.FORWARD;
     }
   
+    /* Returns a random Action out of {TURN_LEFT, TURN_RIGHT, FORWARD}.
+     * The probability of a FORWARD move is greater than a turn.
+     * Returns the Action.
+     */
     private Action getRandomMove() {
 	    Action action;
       	int value = generator.nextInt(12);
@@ -240,9 +244,9 @@ public class MyAI extends Agent
      * Returns the first action it needs to take to backpedal (usually the first turn in a 180).
      */
     private Action backpedal() {
-    		// 180, then transfer stack to actions queue
       	actions.clear();
       	
+      	// 180, then transfer stack to actions queue
       	// if the agent never made a move (perceived hazard at start),
       	// then no need to turn around
       	if (!path.empty()) {
@@ -259,6 +263,9 @@ public class MyAI extends Agent
     }
     
     /* Assumes actions is NOT empty.
+     * Pops the next Action from the actions queue, and reverses it if it's a turn - 
+     * e.g., a left turn becomes a right turn, and vice versa.
+     * Returns the next Action in the queue.
      */
     private Action getQueuedAction() throws NoSuchElementException {
     		Action nextAction = actions.remove();
@@ -275,6 +282,13 @@ public class MyAI extends Agent
 				break;
     		}
     		return nextAction;
+    }
+    
+    /* Marks all of currentNode's neighbors as hazardous.
+     * TODO: DO NOT mark the node you just came from.
+     */
+    private void markNeighborsAsHazardous() {
+    		
     }
 
 	// ======================================================================

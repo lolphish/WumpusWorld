@@ -1,24 +1,26 @@
+import java.util.Arrays;
+import java.util.List;
 
 public class Node {
 	public static final double UNEXPLORED = -1;
 	public static final double EMPTY = 1;
 	public static final double HAZARDOUS = 0;
-	public static final double SENSED = 0.5;
+	public static final double SENSED = 0.33;
 	
 	private boolean startingPoint;
 	private double acceptanceProbability;
-	private Edge above;
-	private Edge below;
-	private Edge left;
-	private Edge right;
+	private Node above;
+	private Node below;
+	private Node left;
+	private Node right;
 	
 	public Node(double acceptanceProbability, boolean startingPoint) {
 		this.startingPoint = startingPoint;
 		setAcceptanceProbability(acceptanceProbability);
-		above = new Edge(this);
-		below = new Edge(this);
-		left = new Edge(this);
-		right = new Edge(this);
+		above = new Node();
+		below = new Node();
+		left = new Node();
+		right = new Node();
 	}
 	
 	public Node() {
@@ -37,37 +39,14 @@ public class Node {
 	public String toString() {
 		return String.format("Node(probability=%.2f, starting=%s)", getAcceptanceProbability(), startingPoint);
 	}
-
-	public Edge getAbove() {
-		return above;
-	}
-
-	public void setAbove(Edge above) {
-		this.above = above;
-	}
-
-	public Edge getBelow() {
-		return below;
-	}
-
-	public void setBelow(Edge below) {
-		this.below = below;
-	}
-
-	public Edge getLeft() {
-		return left;
-	}
-
-	public void setLeft(Edge left) {
-		this.left = left;
-	}
-
-	public Edge getRight() {
-		return right;
-	}
-
-	public void setRight(Edge right) {
-		this.right = right;
+	
+	/*
+	 * Convenience method.
+	 * Returns a list of all of this node's neighbors.
+	 * [above, below, right, left]
+	 */
+	public List<Node> getNeighbors() {
+		return Arrays.asList(getAbove(), getBelow(), getRight(), getLeft());
 	}
 
 	public boolean isStartingPoint() {
@@ -80,6 +59,38 @@ public class Node {
 
 	public void setAcceptanceProbability(double acceptanceProbability) {
 		this.acceptanceProbability = acceptanceProbability;
+	}
+
+	public Node getAbove() {
+		return above;
+	}
+
+	public void setAbove(Node above) {
+		this.above = above;
+	}
+
+	public Node getBelow() {
+		return below;
+	}
+
+	public void setBelow(Node below) {
+		this.below = below;
+	}
+
+	public Node getLeft() {
+		return left;
+	}
+
+	public void setLeft(Node left) {
+		this.left = left;
+	}
+
+	public Node getRight() {
+		return right;
+	}
+
+	public void setRight(Node right) {
+		this.right = right;
 	}
 	
 }
