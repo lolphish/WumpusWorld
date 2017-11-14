@@ -17,10 +17,10 @@ public class Node {
 	public Node(double acceptanceProbability, boolean startingPoint) {
 		this.startingPoint = startingPoint;
 		setAcceptanceProbability(acceptanceProbability);
-		above = new Node();
-		below = new Node();
-		left = new Node();
-		right = new Node();
+		above = null;
+		below = null;
+		left = null;
+		right = null; 
 	}
 	
 	public Node() {

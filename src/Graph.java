@@ -1,13 +1,17 @@
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashSet;
+import java.util.Map;
 import java.util.Set;
 
 
 public class Graph {
 	private Set<Node> nodes;
+	private Map<Point,Node> map; // Map to store points
 	
 	public Graph() {
 		nodes = new LinkedHashSet<>();
+		map = new HashMap<>();
 	}
 	
 	public int size() {
@@ -24,12 +28,13 @@ public class Graph {
 	 * If there already is a node in "from's" direction, does nothing;
 	 *   returns that existing node. 
 	 */
-	public Node addNode(Node origin, MyAI.Direction direction) {
+	public Node addNode(Node origin, MyAI.Direction direction, Point currentPoint) {
 		Node destination = getAdjacentNode(origin, direction);
 		if (destination != null) {
 			return destination;
 		}
 		
+
 		destination = new Node();
 		switch (direction) {
 			case UP:
@@ -51,7 +56,9 @@ public class Graph {
 			default:
 				throw new RuntimeException("unexpected direction");
 		}
-		addNode(destination);
+		
+		map.put(currentPoint, destination);
+		setNeighbors(currentPoint, destination);
 		return destination;
 	}
 	
@@ -79,5 +86,21 @@ public class Graph {
 				throw new RuntimeException("unexpected direction");
 		}
 		return adjacent;
+	}
+	
+	/*
+	 * Finds if there are possible neighbors in the map and update
+	 * current node point
+	 */
+	private void setNeighbors(Point currentPoint, Node destination)
+	{
+		Point left = new Point(currentPoint.getX()-1, currentPoint.getY());
+		Point right = new Point(currentPoint.getX()+1, currentPoint.getY());
+		Point up = new Point(currentPoint.getX(), currentPoint.getY()+1);
+		Point down = new Point(currentPoint.getX(), currentPoint.getY()-1);
+		destination.setLeft(map.get(left));
+		destination.setRight(map.get(right));
+		destination.setAbove(map.get(up));
+		destination.setBelow(map.get(down));
 	}
 }

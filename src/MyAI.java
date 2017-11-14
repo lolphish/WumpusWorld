@@ -201,7 +201,7 @@ public class MyAI extends Agent
     				currentPoint.addX(-1);
     				break;
     		}
-    		currentNode = cave.addNode(currentNode, direction); 
+    		currentNode = cave.addNode(currentNode, direction, currentPoint); 
     		return Action.FORWARD;
     }
   
