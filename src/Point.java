@@ -4,17 +4,13 @@ public class Point {
 	private int y;
 	
 	public Point(int x, int y) {
-		this.x = x;
-		this.y = y;
-	}
-	
-	public Point() {
-		this(1, 1);
+		setX(x);
+		setY(y);
 	}
 	
 	public Point(Point other) {
-		x = other.getX();
-		y = other.getY();
+		setX(other.getX());
+		setY(other.getY());
 	}
 	
 	@Override
@@ -29,6 +25,12 @@ public class Point {
 		}
 		Point otherPoint = (Point)other;
 		return getX() == otherPoint.getX() && getY() == otherPoint.getY();
+	}
+	
+	@Override
+	public int hashCode() {
+		String asString = String.format("%d%d", getX(), getY());
+		return asString.hashCode();
 	}
 
 	public int getX() {

@@ -1,25 +1,22 @@
 import java.util.HashMap;
-import java.util.HashSet;
-import java.util.LinkedHashSet;
 import java.util.Map;
-import java.util.Set;
 
 
 public class Graph {
-	private Set<Node> nodes;
-	private Map<Point,Node> map; // Map to store points
+	private Map<Point,Node> nodes; // Map to store points
 	
 	public Graph() {
-		nodes = new LinkedHashSet<>();
-		map = new HashMap<>();
+		nodes = new HashMap<>();
+	}
+	
+	public Graph(Node startingNode) {
+		this();
+		Point initialPoint = new Point(1, 1);
+		nodes.put(initialPoint, startingNode);
 	}
 	
 	public int size() {
 		return nodes.size();
-	}
-	
-	public void addNode(Node node) {
-		nodes.add(node);
 	}
 	
 	/*
@@ -34,7 +31,6 @@ public class Graph {
 			return destination;
 		}
 		
-
 		destination = new Node();
 		switch (direction) {
 			case UP:
@@ -57,8 +53,9 @@ public class Graph {
 				throw new RuntimeException("unexpected direction");
 		}
 		
-		map.put(currentPoint, destination);
-		setNeighbors(currentPoint, destination);
+		Point copyPoint = new Point(currentPoint);
+		nodes.put(copyPoint, destination);
+		setNeighbors(copyPoint, destination);
 		return destination;
 	}
 	
@@ -98,9 +95,9 @@ public class Graph {
 		Point right = new Point(currentPoint.getX()+1, currentPoint.getY());
 		Point up = new Point(currentPoint.getX(), currentPoint.getY()+1);
 		Point down = new Point(currentPoint.getX(), currentPoint.getY()-1);
-		destination.setLeft(map.get(left));
-		destination.setRight(map.get(right));
-		destination.setAbove(map.get(up));
-		destination.setBelow(map.get(down));
+		destination.setLeft(nodes.get(left));
+		destination.setRight(nodes.get(right));
+		destination.setAbove(nodes.get(up));
+		destination.setBelow(nodes.get(down));
 	}
 }

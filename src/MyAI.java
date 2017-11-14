@@ -54,10 +54,9 @@ public class MyAI extends Agent
 		// ======================================================================
 		// YOUR CODE BEGINS
 		// ======================================================================
-      	currentPoint = new Point();		// initialized to (1, 1)
-      	cave = new Graph();
-      	currentNode = new Node(Node.EMPTY, true);
-      	cave.addNode(currentNode);
+      	currentPoint = new Point(1, 1);
+      	currentNode = new Node(Node.Marker.EXPLORED);
+      	cave = new Graph(currentNode);
       	
 		hasArrow = true;
 		wumpusAlive = true;
@@ -96,7 +95,7 @@ public class MyAI extends Agent
             return Action.GRAB;
         }
         
-        if (currentNode.isStartingPoint() && cave.size() > 1) {
+        if (currentPoint.atStart() && cave.size() > 1) {
         		return Action.CLIMB;
         }
       
@@ -105,20 +104,22 @@ public class MyAI extends Agent
 			return getQueuedAction();
 		}
 		
-		Action action;
 		// attempt to kill the Wumpus
 		if (stench && hasArrow) {
 //            hasArrow = false;
 //            return Action.SHOOT;		// return; don't add Action.SHOOT to the path stack
         }
 		
-		currentNode.setAcceptanceProbability(Node.EMPTY);
-		if (breeze || stench) {
-          	// 180, then pop from the stack
-			currentNode.setAcceptanceProbability(Node.SENSED);
-          	return backpedal();
-        }
-		else if (bump) {
+		currentNode.setMarker(Node.Marker.EXPLORED);
+		if (breeze) {
+			currentNode.setMarker(Node.Marker.BREEZE);
+		}
+		if (stench) {
+			currentNode.setMarker(Node.Marker.STENCH);
+		}
+		
+		Action action;
+		if (bump) {
 			// turn 180 if you perceive a bump?
 			// in the worst case, it will take at least 2 90-degree turns to recover from a bump
 			// but, it would only take 1 180-degree turn
@@ -282,13 +283,6 @@ public class MyAI extends Agent
 				break;
     		}
     		return nextAction;
-    }
-    
-    /* Marks all of currentNode's neighbors as hazardous.
-     * TODO: DO NOT mark the node you just came from.
-     */
-    private void markNeighborsAsHazardous() {
-    		
     }
 
 	// ======================================================================

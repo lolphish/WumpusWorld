@@ -1,22 +1,21 @@
-import java.util.Arrays;
-import java.util.List;
 
 public class Node {
-	public static final double UNEXPLORED = -1;
-	public static final double EMPTY = 1;
-	public static final double HAZARDOUS = 0;
-	public static final double SENSED = 0.33;
 	
-	private boolean startingPoint;
-	private double acceptanceProbability;
+	static enum Marker {
+		UNEXPLORED,
+		EXPLORED,
+		BREEZE,
+		STENCH
+	}
+	
+	private Marker marker;
 	private Node above;
 	private Node below;
 	private Node left;
 	private Node right;
 	
-	public Node(double acceptanceProbability, boolean startingPoint) {
-		this.startingPoint = startingPoint;
-		setAcceptanceProbability(acceptanceProbability);
+	public Node(Marker marker) {
+		setMarker(marker);
 		above = null;
 		below = null;
 		left = null;
@@ -24,41 +23,20 @@ public class Node {
 	}
 	
 	public Node() {
-		this(UNEXPLORED, false);
-	}
-	
-	public Node(double acceptanceProbability) {
-		this(acceptanceProbability, false);
-	}
-	
-	public Node(boolean startingPoint) {
-		this(UNEXPLORED, startingPoint);
+		this(Marker.UNEXPLORED);
 	}
 	
 	@Override
 	public String toString() {
-		return String.format("Node(probability=%.2f, starting=%s)", getAcceptanceProbability(), startingPoint);
+		return String.format("Node(probability=%s)", marker);
 	}
 	
-	/*
-	 * Convenience method.
-	 * Returns a list of all of this node's neighbors.
-	 * [above, below, right, left]
-	 */
-	public List<Node> getNeighbors() {
-		return Arrays.asList(getAbove(), getBelow(), getRight(), getLeft());
+	public Marker getMarker() {
+		return marker;
 	}
-
-	public boolean isStartingPoint() {
-		return startingPoint;
-	}
-
-	public double getAcceptanceProbability() {
-		return acceptanceProbability;
-	}
-
-	public void setAcceptanceProbability(double acceptanceProbability) {
-		this.acceptanceProbability = acceptanceProbability;
+	
+	public void setMarker(Marker marker) {
+		this.marker = marker;
 	}
 
 	public Node getAbove() {
