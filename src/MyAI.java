@@ -21,6 +21,7 @@ import java.util.LinkedList;
 import java.util.NoSuchElementException;
 import java.util.Queue;
 import java.util.Random;
+import java.util.Set;
 import java.util.Stack;
 
 
@@ -48,6 +49,7 @@ public class MyAI extends Agent
   	private Queue<Action> actions;
   	private boolean hasArrow;
   	private boolean wumpusAlive;
+  	private boolean climbOut;
   	
 	public MyAI ( )
 	{
@@ -60,6 +62,7 @@ public class MyAI extends Agent
       	
 		hasArrow = true;
 		wumpusAlive = true;
+		climbOut = false;
 		
       	path = new Stack<>();
       	actions = new LinkedList<>();
@@ -86,26 +89,30 @@ public class MyAI extends Agent
 		}
 		
 		if (bump) {
+			// TODO:
 			// moveForward() adds a new node
 			// if a bump is perceived, a new node was added when it shouldn't have been
-			// TODO: find a way to fix this
+			// we can mark this node as a WALL, then update currentPoint to be the node that it came from
+			cave.markNodeAtPoint(currentPoint, Node.Marker.WALL);
+			currentPoint = getLocalOriginPoint(currentPoint);
 		}
 		
         if (glitter) {
+        		climbOut = true;
             return Action.GRAB;
         }
         
-        if (currentPoint.atStart() && cave.size() > 1) {
+        if (climbOut && currentPoint.atStart()) {
         		return Action.CLIMB;
         }
       
         // if an upcoming action has been queued, prioritize it
 		if (!actions.isEmpty()) {
-			return getQueuedAction();
+			return dequeueAction();
 		}
 		
 		// attempt to kill the Wumpus
-		if (stench && hasArrow) {
+		if (stench && wumpusAlive && hasArrow) {
 //            hasArrow = false;
 //            return Action.SHOOT;		// return; don't add Action.SHOOT to the path stack
         }
@@ -119,7 +126,11 @@ public class MyAI extends Agent
 		}
 		
 		Action action;
-		if (bump) {
+		if (breeze || stench) {
+			action = goBack();
+			actions.add(Action.TURN_LEFT);
+		}
+		else if (bump) {
 			// turn 180 if you perceive a bump?
 			// in the worst case, it will take at least 2 90-degree turns to recover from a bump
 			// but, it would only take 1 180-degree turn
@@ -240,35 +251,47 @@ public class MyAI extends Agent
     		return action;
     }
   
-    /* Clears all upcoming actions and begins backtracking (literally)
-     * to the starting position, in the order that it came.
-     * Returns the first action it needs to take to backpedal (usually the first turn in a 180).
+//    /* Clears all upcoming actions and begins backtracking (literally)
+//     * to the starting position, in the order that it came.
+//     * Returns the first action it needs to take to backpedal (usually the first turn in a 180).
+//     */
+//    private Action backpedal() {
+//      	actions.clear();
+//      	
+//      	// 180, then transfer stack to actions queue
+//      	// if the agent never made a move (perceived hazard at start),
+//      	// then no need to turn around
+//      	if (!path.empty()) {
+//      		actions.add(Action.TURN_RIGHT);
+//          	actions.add(Action.TURN_RIGHT);
+//      	}
+//      	
+//        while (!path.empty()) {
+//            actions.add(path.pop());
+//        }
+//        
+//        actions.add(Action.CLIMB);
+//        return dequeueAction();
+//    }
+    
+    /* Readies the agent to go to the square behind him.
+     * Returns the first turn.
      */
-    private Action backpedal() {
-      	actions.clear();
-      	
-      	// 180, then transfer stack to actions queue
-      	// if the agent never made a move (perceived hazard at start),
-      	// then no need to turn around
-      	if (!path.empty()) {
-      		actions.add(Action.TURN_RIGHT);
-          	actions.add(Action.TURN_RIGHT);	
-      	}
-      	
-        while (!path.empty()) {
-            actions.add(path.pop());
-        }
-        
-        actions.add(Action.CLIMB);
-        return getQueuedAction();
+    private Action goBack() {
+    		actions.add(Action.TURN_RIGHT);
+    		actions.add(Action.TURN_RIGHT);
+    		actions.add(Action.FORWARD);
+    		actions.add(Action.TURN_RIGHT);
+    		actions.add(Action.TURN_RIGHT);
+    		return dequeueAction();
     }
     
     /* Assumes actions is NOT empty.
      * Pops the next Action from the actions queue, and reverses it if it's a turn - 
-     * e.g., a left turn becomes a right turn, and vice versa.
+     * e.g., a left turn becomes a right turn, and vice versa, and moveForward updates currentPoint and cave.
      * Returns the next Action in the queue.
      */
-    private Action getQueuedAction() throws NoSuchElementException {
+    private Action dequeueAction() throws NoSuchElementException {
     		Action nextAction = actions.remove();
     		switch (nextAction) {
     			case TURN_LEFT:
@@ -283,6 +306,26 @@ public class MyAI extends Agent
 				break;
     		}
     		return nextAction;
+    }
+    
+    /*
+     * Helper function for restoring currentPoint after bumping into a wall.
+     * After perceiving a bump, currentPoint has already been updated to out-of-bounds.
+     * Returns the valid Point that it came from.
+     * example: currentPoint = getLocalOriginPoint(currentPoint);
+     */
+    private Point getLocalOriginPoint(Point point) {
+    		Node target = cave.getNode(point);
+    		if (target == null) {
+    			throw new WumpusWorldException("received null Node target; expected valid");
+    		}
+    		Set<Point> neighbors = cave.getAdjacentPoints(point);
+    		
+    		// a wall should only be connected to a valid node on ONE of its ends
+    		if (neighbors.size() != 1) {
+    			throw new WumpusWorldException("expected exactly 1 valid neighboring node");
+    		}
+    		return neighbors.iterator().next();
     }
 
 	// ======================================================================

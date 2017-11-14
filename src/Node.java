@@ -5,7 +5,9 @@ public class Node {
 		UNEXPLORED,
 		EXPLORED,
 		BREEZE,
-		STENCH
+		STENCH,
+		HAZARDOUS,
+		WALL
 	}
 	
 	private Marker marker;
