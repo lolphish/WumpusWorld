@@ -106,25 +106,6 @@ public class Graph {
 	}
 	
 	/*
-	 * Returns a set of all non-null neighbors of currentPoint.
-	 */
-	public Set<Node> getNeighbors(Point currentPoint) {
-		Point left = new Point(currentPoint.getX() - 1, currentPoint.getY());
-		Point right = new Point(currentPoint.getX() + 1, currentPoint.getY());
-		Point up = new Point(currentPoint.getX(), currentPoint.getY() + 1);
-		Point down = new Point(currentPoint.getX(), currentPoint.getY() - 1);
-		
-		Set<Node> neighbors = new HashSet<>();
-		neighbors.add(nodes.get(left));
-		neighbors.add(nodes.get(right));
-		neighbors.add(nodes.get(up));
-		neighbors.add(nodes.get(down));
-		
-		neighbors.remove(null);
-		return neighbors;
-	}
-	
-	/*
 	 * Returns a set of Points detailing "point's" immediate neighbors.
 	 */
 	public Set<Point> getAdjacentPoints(Point point) {
@@ -147,6 +128,20 @@ public class Graph {
 			neighbors.add(down);
 		}
 		return neighbors;
+	}
+	
+	/*
+	 * Returns a set of all non-null neighbors of point.
+	 */
+	public Set<Node> getNeighbors(Point point) {
+		Set<Node> result = new HashSet<>();
+		for (Point adjacentPoint : getAdjacentPoints(point)) {
+			Node node = nodes.get(adjacentPoint);
+			if (node != null) {
+				result.add(node);
+			}
+		}
+		return result;
 	}
 	
 	/* Marks the node at 'point' with 'marker', if it exists.

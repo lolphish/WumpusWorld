@@ -89,7 +89,6 @@ public class MyAI extends Agent
 		}
 		
 		if (bump) {
-			// TODO:
 			// moveForward() adds a new node
 			// if a bump is perceived, a new node was added when it shouldn't have been
 			// we can mark this node as a WALL, then update currentPoint to be the node that it came from
@@ -131,11 +130,9 @@ public class MyAI extends Agent
 			actions.add(Action.TURN_LEFT);
 		}
 		else if (bump) {
-			// turn 180 if you perceive a bump?
-			// in the worst case, it will take at least 2 90-degree turns to recover from a bump
-			// but, it would only take 1 180-degree turn
+			// TODO: add logic
+			// random turn on bump?
 			action = getRandomTurn();
-			actions.add(action);
 		}
         else {
         		action = moveForward();
