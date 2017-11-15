@@ -1,7 +1,13 @@
+import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
+import java.util.PriorityQueue;
+import java.util.Queue;
 import java.util.Set;
+import java.util.Stack;
 
 
 public class Graph {
@@ -160,4 +166,71 @@ public class Graph {
 	public Node getNode(Point point) {
 		return nodes.get(point);
 	}
+	
+	public static int getManhattanDistance(Point point1, Point point2) {
+		return Math.abs(point1.getX() - point2.getX()) + Math.abs(point1.getY() + point2.getY());
+	}
+	
+	/* 
+	 * Performs a greedy best-first search from origin to destination.
+	 * Returns a Stack of Points of the discovered path.
+	 */
+	public Stack<Point> getPath(Point origin, Point destination) {
+		Stack<Point> result = new Stack<>();
+      	Map<Point, Point> parents = new HashMap<>();
+      	Comparator<Object> pointComparator = new PointComparator(destination);
+      	Queue<Point> frontier = new PriorityQueue<Point>(pointComparator);
+      
+      	frontier.add(origin);
+      	parents.put(origin, null);
+      	
+      	while (!frontier.isEmpty()) {
+          	// find the least-cost node
+          	Point current = frontier.poll();
+            if (current.equals(destination)) {
+            		break;
+            }
+          
+          	// TODO: avoid hazards
+            // expand all children of current node
+            for (Point child : getAdjacentPoints(current)) {
+              	// graph search; ignore already-stepped-on points
+                if (!parents.containsKey(child)) {
+                    if (!nodes.get(child).isDangerous()) {
+                        frontier.add(child);
+                    }
+                  	parents.put(child, current);
+              	}
+            }
+      	}
+      
+      	// find least-cost path from destination -> origin
+      	Point current = destination;
+      	while (parents.get(current) != null) {
+      		result.push(current);
+      		current = parents.get(current);
+        }
+     	
+		return result;
+	}
+  
+  	/* 
+     * Comparator to order by increasing Manhattan distance (i.e., least to greatest).
+     */
+    private class PointComparator implements Comparator<Object> {
+      	private Point destination;
+      
+        public PointComparator(Point destination) {
+          	this.destination = destination;
+        }
+      	
+        @Override
+        public int compare(Object a1, Object b1) {
+            Point a = (Point)a1;
+            Point b = (Point)b1;
+            return getManhattanDistance(a, destination) - getManhattanDistance(b, destination);
+        }
+    }
 }
+
+

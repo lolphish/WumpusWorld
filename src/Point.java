@@ -1,5 +1,10 @@
 
 public class Point {
+	
+	public static Point getStartingPoint() {
+		return new Point(1, 1);
+	}
+	
 	private int x;
 	private int y;
 	
