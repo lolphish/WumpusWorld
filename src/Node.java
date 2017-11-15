@@ -37,6 +37,10 @@ public class Node {
 		return marker;
 	}
 	
+	public boolean isDangerous() {
+		return marker == marker.HAZARDOUS;
+	}
+	
 	public void setMarker(Marker marker) {
 		this.marker = marker;
 	}
