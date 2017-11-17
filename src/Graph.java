@@ -211,64 +211,64 @@ public class Graph {
 	 */
 	public Stack<Point> getPath(Point origin, Point destination) {
 		Stack<Point> result = new Stack<>();
-      	Map<Point, Point> parents = new HashMap<>();
-      	Comparator<Object> pointComparator = new PointComparator(destination);
-      	Queue<Point> frontier = new PriorityQueue<Point>(pointComparator);
-      
-      	frontier.add(origin);
-      	parents.put(origin, null);
-      	
-      	
-      	// if the search stops because the frontier is empty,
-      	// no path was found?
-      	while (!frontier.isEmpty()) {
-          	// find the least-cost node
-          	Point current = frontier.poll();
-            if (current.equals(destination)) {
-            		// an optimal (greedy) path has been found
-            		break;
-            }
-          
-          	// TODO: avoid hazards
-            // expand all children of current node
-            for (Point child : getKnownAdjacentPoints(current)) {
-              	// graph search; ignore already-stepped-on points
-                if (!parents.containsKey(child)) {
-                    if (!nodes.get(child).isDangerous()) {
-                        frontier.add(child);
-                    }
-                  	parents.put(child, current);
-              	}
-            }
-      	}
-      
-      	// find least-cost path from destination -> origin
-      	Point current = destination;
-      	while (parents.get(current) != null) {
-      		result.push(current);
-      		current = parents.get(current);
-        }
-     	
+		Map<Point, Point> parents = new HashMap<>();
+		Comparator<Object> pointComparator = new PointComparator(destination);
+		Queue<Point> frontier = new PriorityQueue<Point>(pointComparator);
+	  
+		frontier.add(origin);
+		parents.put(origin, null);
+		
+		
+		// if the search stops because the frontier is empty,
+		// no path was found?
+		while (!frontier.isEmpty()) {
+			// find the least-cost node
+			Point current = frontier.poll();
+			if (current.equals(destination)) {
+					// an optimal (greedy) path has been found
+					break;
+			}
+		  
+			// TODO: avoid hazards
+			// expand all children of current node
+			for (Point child : getKnownAdjacentPoints(current)) {
+				// graph search; ignore already-stepped-on points
+				if (!parents.containsKey(child)) {
+					if (!nodes.get(child).isDangerous()) {
+						frontier.add(child);
+					}
+					parents.put(child, current);
+				}
+			}
+		}
+	  
+		// find least-cost path from destination -> origin
+		Point current = destination;
+		while (parents.get(current) != null) {
+			result.push(current);
+			current = parents.get(current);
+		}
+		
 		return result;
 	}
   
-  	/* 
-     * Comparator to order by increasing Manhattan distance (i.e., least to greatest).
-     */
-    private class PointComparator implements Comparator<Object> {
-      	private Point destination;
-      
-        public PointComparator(Point destination) {
-          	this.destination = destination;
-        }
-      	
-        @Override
-        public int compare(Object a1, Object b1) {
-            Point a = (Point)a1;
-            Point b = (Point)b1;
-            return getManhattanDistance(a, destination) - getManhattanDistance(b, destination);
-        }
-    }
+	/* 
+	 * Comparator to order by increasing Manhattan distance (i.e., least to greatest).
+	 */
+	private class PointComparator implements Comparator<Object> {
+		private Point destination;
+	  
+		public PointComparator(Point destination) {
+			this.destination = destination;
+		}
+		
+		@Override
+		public int compare(Object a1, Object b1) {
+			Point a = (Point)a1;
+			Point b = (Point)b1;
+			return getManhattanDistance(a, destination) - getManhattanDistance(b, destination);
+		}
+	}
 }
 
 
