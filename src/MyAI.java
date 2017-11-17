@@ -18,6 +18,7 @@
 // ======================================================================
 
 import java.util.LinkedList;
+import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.Queue;
 import java.util.Random;
@@ -45,7 +46,6 @@ public class MyAI extends Agent
   	private Point currentPoint;
   	private Node currentNode;
   	private Graph cave;
-  	private Stack<Action> path;
   	private Queue<Action> actions;
   	private boolean hasArrow;
   	private boolean wumpusAlive;
@@ -56,7 +56,7 @@ public class MyAI extends Agent
 		// ======================================================================
 		// YOUR CODE BEGINS
 		// ======================================================================
-      	currentPoint = new Point(1, 1);
+      	currentPoint = Point.getStartingPoint();		// initialized to (1, 1)
       	currentNode = new Node(Node.Marker.EXPLORED);
       	cave = new Graph(currentNode);
       	
@@ -64,7 +64,6 @@ public class MyAI extends Agent
 		wumpusAlive = true;
 		climbOut = false;
 		
-      	path = new Stack<>();
       	actions = new LinkedList<>();
       	direction = Direction.RIGHT;
 		// ======================================================================
@@ -92,6 +91,7 @@ public class MyAI extends Agent
 			// moveForward() adds a new node
 			// if a bump is perceived, a new node was added when it shouldn't have been
 			// we can mark this node as a WALL, then update currentPoint to be the node that it came from
+			// TODO: add right/top wall
 			cave.markNodeAtPoint(currentPoint, Node.Marker.WALL);
 			currentPoint = getLocalOriginPoint(currentPoint);
 		}
@@ -113,7 +113,7 @@ public class MyAI extends Agent
 		// attempt to kill the Wumpus
 		if (stench && wumpusAlive && hasArrow) {
 //            hasArrow = false;
-//            return Action.SHOOT;		// return; don't add Action.SHOOT to the path stack
+//            return Action.SHOOT;
         }
 		
 		currentNode.setMarker(Node.Marker.EXPLORED);
@@ -126,21 +126,13 @@ public class MyAI extends Agent
 		
 		Action action;
 		if (breeze || stench) {
-			action = goBack();
-			actions.add(Action.TURN_LEFT);
-		}
-		else if (bump) {
-			// TODO: add logic
-			// random turn on bump?
-			action = getRandomTurn();
+          	// TODO: go back to where you came from, and move to a non-dangerous node
+			Stack<Point> backPath = cave.getPath(currentPoint, Point.getStartingPoint());
+			action = moveForward();	// PLACEHOLDER
 		}
         else {
         		action = moveForward();
         }
-        
-		// track the steps that the Agent has taken,
-		// so that it can safely (though possibly not efficiently) back-track to the start
-        path.push(action);
         
 		return action;
 		// ======================================================================
@@ -156,62 +148,61 @@ public class MyAI extends Agent
      * returns Action.TURN_LEFT, and updates the AI's direction.
      */
     private Action turnLeft() {
-      
-    		switch (direction) {
-    			case UP:
-    				direction = Direction.LEFT;
-    				break;
-    			case LEFT:
-    				direction = Direction.DOWN;
-    				break;
-    			case DOWN:
-    				direction = Direction.RIGHT;
-    				break;
-    			case RIGHT:
-    				direction = Direction.UP;
-    				break;
-    		}
-    		return Action.TURN_LEFT;
+        switch (direction) {
+            case UP:
+                direction = Direction.LEFT;
+                break;
+            case LEFT:
+                direction = Direction.DOWN;
+                break;
+            case DOWN:
+                direction = Direction.RIGHT;
+                break;
+            case RIGHT:
+                direction = Direction.UP;
+                break;
+        }
+        return Action.TURN_LEFT;
     }
     
     /* Helper function;
      * returns Action.TURN_RIGHT, and updates the AI's direction.
      */
     private Action turnRight() {
-    		switch (direction) {
-    			case UP:
-    				direction = Direction.RIGHT;
-    				break;
-    			case RIGHT:
-    				direction = Direction.DOWN;
-    				break;
-    			case DOWN:
-    				direction = Direction.LEFT;
-    				break;
-    			case LEFT:
-    				direction = Direction.UP;
-    				break;
-    		}
-    		return Action.TURN_RIGHT;
+        switch (direction) {
+            case UP:
+                direction = Direction.RIGHT;
+                break;
+            case RIGHT:
+                direction = Direction.DOWN;
+                break;
+            case DOWN:
+                direction = Direction.LEFT;
+                break;
+            case LEFT:
+                direction = Direction.UP;
+                break;
+        }
+        return Action.TURN_RIGHT;
     }
     
     private Action moveForward() {
-    		switch (direction) {
-    			case UP:
-    				currentPoint.addY(1);
-    				break;
-    			case DOWN:
-    				currentPoint.addY(-1);
-    				break;
-    			case RIGHT:
-    				currentPoint.addX(1);
-    				break;
-    			case LEFT:
-    				currentPoint.addX(-1);
-    				break;
-    		}
-    		currentNode = cave.addNode(currentNode, direction, currentPoint); 
-    		return Action.FORWARD;
+        switch (direction) {
+            case UP:
+                currentPoint.addY(1);
+                break;
+            case DOWN:
+                currentPoint.addY(-1);
+                break;
+            case RIGHT:
+                currentPoint.addX(1);
+                break;
+            case LEFT:
+                currentPoint.addX(-1);
+                break;
+        }
+        currentNode = cave.addNode(currentNode, direction, currentPoint); 
+        return Action.FORWARD;
     }
   
     /* Returns a random Action out of {TURN_LEFT, TURN_RIGHT, FORWARD}.
@@ -236,75 +227,149 @@ public class MyAI extends Agent
     }
     
     private Action getRandomTurn() {
-    		Action action;
-    		int value = generator.nextInt(2);
-    		switch (value) {
-    			case 0:
-    				action = turnLeft();
-    				break;
-    			default:
-    				action = turnRight();
-    		}
-    		return action;
+        Action action;
+        int value = generator.nextInt(2);
+        switch (value) {
+            case 0:
+                action = turnLeft();
+                break;
+            default:
+                action = turnRight();
+        }
+        return action;
     }
-  
-//    /* Clears all upcoming actions and begins backtracking (literally)
-//     * to the starting position, in the order that it came.
-//     * Returns the first action it needs to take to backpedal (usually the first turn in a 180).
-//     */
-//    private Action backpedal() {
-//      	actions.clear();
-//      	
-//      	// 180, then transfer stack to actions queue
-//      	// if the agent never made a move (perceived hazard at start),
-//      	// then no need to turn around
-//      	if (!path.empty()) {
-//      		actions.add(Action.TURN_RIGHT);
-//          	actions.add(Action.TURN_RIGHT);
-//      	}
-//      	
-//        while (!path.empty()) {
-//            actions.add(path.pop());
-//        }
-//        
-//        actions.add(Action.CLIMB);
-//        return dequeueAction();
-//    }
     
     /* Readies the agent to go to the square behind him.
      * Returns the first turn.
      */
     private Action goBack() {
-    		actions.add(Action.TURN_RIGHT);
-    		actions.add(Action.TURN_RIGHT);
-    		actions.add(Action.FORWARD);
-    		actions.add(Action.TURN_RIGHT);
-    		actions.add(Action.TURN_RIGHT);
-    		return dequeueAction();
+        actions.add(Action.TURN_RIGHT);
+        actions.add(Action.TURN_RIGHT);
+        actions.add(Action.FORWARD);
+        actions.add(Action.TURN_RIGHT);
+        actions.add(Action.TURN_RIGHT);
+        return dequeueAction();
     }
     
     /* Assumes actions is NOT empty.
-     * Pops the next Action from the actions queue, and reverses it if it's a turn - 
-     * e.g., a left turn becomes a right turn, and vice versa, and moveForward updates currentPoint and cave.
-     * Returns the next Action in the queue.
+     * Pops the next Action from the actions queue, and returns it.
      */
     private Action dequeueAction() throws NoSuchElementException {
-    		Action nextAction = actions.remove();
-    		switch (nextAction) {
-    			case TURN_LEFT:
-				nextAction = turnRight();
-				break;
-			case TURN_RIGHT:
-				nextAction = turnLeft();
-				break;
-			case FORWARD:
-				nextAction = moveForward();
-			default:
-				break;
-    		}
-    		return nextAction;
+        Action nextAction = actions.remove();
+        switch (nextAction) {
+            case TURN_LEFT:
+            nextAction = turnLeft();
+            break;
+        case TURN_RIGHT:
+            nextAction = turnRight();
+            break;
+        case FORWARD:
+            nextAction = moveForward();
+        default:
+            break;
+        }
+        return nextAction;
+    }
+  
+  	/* Queues turn Actions until the Agent is facing targetDirection.
+     * TODO: optimize
+     */
+    private void faceDirection(Direction currentDirection, Direction targetDirection) {
+        if (currentDirection == targetDirection) {
+            return;
+        }
+        switch (currentDirection) {
+	        	case UP:
+	            switch (targetDirection) {
+	              	case DOWN:
+	          			actions.add(Action.TURN_RIGHT);
+	          			actions.add(Action.TURN_RIGHT);
+	              		break;
+	              	case LEFT:
+	          			actions.add(Action.TURN_LEFT);
+	              		break;
+	              	case RIGHT:
+	              		actions.add(Action.TURN_RIGHT);
+	              		break;
+	            }
+	      		break;
+	      	case DOWN:
+	      		switch (targetDirection) {
+	              	case UP:
+	          			actions.add(Action.TURN_RIGHT);
+	          			actions.add(Action.TURN_RIGHT);
+	              		break;
+	              	case LEFT:
+	          			actions.add(Action.TURN_RIGHT);
+	              		break;
+	              	case RIGHT:
+	              		actions.add(Action.TURN_LEFT);
+	              		break;
+	      		}
+	      		break;
+	      	case LEFT:
+	      		switch (targetDirection) {
+	              	case UP:
+	          			actions.add(Action.TURN_RIGHT);
+	              		break;
+	              	case DOWN:
+	          			actions.add(Action.TURN_LEFT);
+	              		break;
+	              	case RIGHT:
+	              		actions.add(Action.TURN_RIGHT);
+	              		actions.add(Action.TURN_RIGHT);
+	              		break;
+	            }
+	      		break;
+	      	case RIGHT:
+	      		switch (targetDirection) {
+	              	case UP:
+	          			actions.add(Action.TURN_LEFT);
+	              		break;
+	              	case DOWN:
+	          			actions.add(Action.TURN_RIGHT);
+	              		break;
+	              	case LEFT:
+	              		actions.add(Action.TURN_RIGHT);
+	              		actions.add(Action.TURN_RIGHT);
+	              		break;
+	            }
+	      		break;
+        }
     }
     
+      /*
+     * convert stack of point directions to actions and add them to the actions
+     * queue
+     */
+    private void getActionsFromPoints(Stack<Point> points) {
+    	Direction currentDirection = direction, nextDirection = null;
+    	Point currentLocationPoint = currentPoint, nextPoint = null;
+    	while(!points.isEmpty()) {
+    		nextPoint = points.pop();
+    		switch(currentLocationPoint.getX() - nextPoint.getX()){
+                case 1:
+                    nextDirection = Direction.RIGHT;
+                    break;
+                case -1:
+                    nextDirection = Direction.LEFT;
+                    break;
+    		}
+    		switch(currentLocationPoint.getY() - nextPoint.getY()){
+                case 1:
+                    nextDirection = Direction.UP;
+                    break;
+                case -1:
+                    nextDirection = Direction.DOWN;
+                    break;
+    		}
+			faceDirection(currentDirection, nextDirection);
+			actions.add(Action.FORWARD);
+			currentDirection = nextDirection;
+			currentLocationPoint = nextPoint;
+    	}
+      	direction = currentDirection;
+    }
     /*
      * Helper function for restoring currentPoint after bumping into a wall.
      * After perceiving a bump, currentPoint has already been updated to out-of-bounds.
@@ -312,17 +377,17 @@ public class MyAI extends Agent
      * example: currentPoint = getLocalOriginPoint(currentPoint);
      */
     private Point getLocalOriginPoint(Point point) {
-    		Node target = cave.getNode(point);
-    		if (target == null) {
-    			throw new WumpusWorldException("received null Node target; expected valid");
-    		}
-    		Set<Point> neighbors = cave.getAdjacentPoints(point);
-    		
-    		// a wall should only be connected to a valid node on ONE of its ends
-    		if (neighbors.size() != 1) {
-    			throw new WumpusWorldException("expected exactly 1 valid neighboring node");
-    		}
-    		return neighbors.iterator().next();
+        Node target = cave.getNode(point);
+        if (target == null) {
+            throw new WumpusWorldException("received null Node target; expected valid");
+        }
+        Set<Point> neighbors = cave.getAdjacentPoints(point);
+
+        // a wall should only be connected to a valid node on ONE of its ends
+        if (neighbors.size() != 1) {
+            throw new WumpusWorldException("expected exactly 1 valid neighboring node");
+        }
+        return neighbors.iterator().next();
     }
 
 	// ======================================================================
