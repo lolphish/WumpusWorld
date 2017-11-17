@@ -32,6 +32,8 @@ public class Graph {
 	 *   returns the node added.
 	 * If there already is a node in "from's" direction, does nothing;
 	 *   returns that existing node. 
+	 *   
+	 * @param currentPoint - has already been updated to the coordinates of destination
 	 */
 	public Node addNode(Node origin, MyAI.Direction direction, Point currentPoint) {
 		Node destination = getAdjacentNode(origin, direction);
@@ -39,7 +41,23 @@ public class Graph {
 			return destination;
 		}
 		
-		destination = new Node();
+		destination = branchDestinationNode(origin, direction);
+		
+		// insert a copy of currentPoint into the map;
+		// otherwise its x/y values will update inside the map
+		Point copyPoint = new Point(currentPoint);
+		nodes.put(copyPoint, destination);
+		expandUnexploredNeighbors(destination, currentPoint);
+//		setNeighbors(copyPoint, destination);
+		return destination;
+	}
+	
+	/* Branches a new Node off of origin in direction 'direction'.
+	 *  e.g., direction=LEFT --> origin.LEFT = destination; destination.RIGHT = origin;
+	 * Returns the destination node.
+	 */
+	private Node branchDestinationNode(Node origin, MyAI.Direction direction) {
+		Node destination = new Node();
 		switch (direction) {
 			case UP:
 				origin.setAbove(destination);
@@ -60,13 +78,21 @@ public class Graph {
 			default:
 				throw new WumpusWorldException("unexpected direction");
 		}
-		
-		// insert a copy of currentPoint into the map;
-		// otherwise its x/y values will update inside the map
-		Point copyPoint = new Point(currentPoint);
-		nodes.put(copyPoint, destination);
-		setNeighbors(copyPoint, destination);
 		return destination;
+	}
+	
+	/* Expands the immediate unknown neighbors of the argument node/point, marking them as UNEXPLORED.
+	 */
+	private void expandUnexploredNeighbors(Node from, Point point) {
+		for (Map.Entry<MyAI.Direction, Point> entry : getAdjacentDirectionalPoints(point).entrySet()) {
+			MyAI.Direction direction = entry.getKey();
+			Point adjacentPoint = entry.getValue();
+			if (!nodes.containsKey(adjacentPoint)) {
+				Node destination = branchDestinationNode(from, direction);
+				destination.setMarker(Node.Marker.UNEXPLORED);
+				nodes.put(adjacentPoint, destination);
+			}
+		}
 	}
 	
 	/*
@@ -111,37 +137,45 @@ public class Graph {
 		destination.setBelow(nodes.get(down));
 	}
 	
-	/*
-	 * Returns a set of Points detailing "point's" immediate neighbors.
+	/* Returns a map of ALL POSSIBLE immediate neighbors of 'point' - 
+	 *   e.g., {LEFT: <Point to the left>, RIGHT: <Point to the right>, ...}
+	 * All possible neighbors - meaning even neighbors which do not yet exist (in the graph).
 	 */
-	public Set<Point> getAdjacentPoints(Point point) {
+	public Map<MyAI.Direction, Point> getAdjacentDirectionalPoints(Point point) {
 		Point left = new Point(point.getX() - 1, point.getY());
 		Point right = new Point(point.getX() + 1, point.getY());
 		Point up = new Point(point.getX(), point.getY() + 1);
 		Point down = new Point(point.getX(), point.getY() - 1);
 		
+		Map<MyAI.Direction, Point> result = new HashMap<>();
+		result.put(MyAI.Direction.LEFT, left);
+		result.put(MyAI.Direction.RIGHT, right);
+		result.put(MyAI.Direction.UP, up);
+		result.put(MyAI.Direction.DOWN, down);
+		
+		return result;
+	}
+	
+	/*
+	 * Returns a set of Points detailing "point's" immediate KNOWN neighbors.
+	 */
+	public Set<Point> getKnownAdjacentPoints(Point point) {
 		Set<Point> neighbors = new HashSet<>();
-		if (nodes.containsKey(left)) {
-			neighbors.add(left);
+		for (Point adjacentPoint : getAdjacentDirectionalPoints(point).values()) {
+			if (nodes.containsKey(adjacentPoint)) {
+				neighbors.add(adjacentPoint);
+			}
 		}
-		if (nodes.containsKey(right)) {
-			neighbors.add(right);
-		}
-		if (nodes.containsKey(up)) {
-			neighbors.add(up);
-		}
-		if (nodes.containsKey(down)) {
-			neighbors.add(down);
-		}
+		
 		return neighbors;
 	}
 	
 	/*
-	 * Returns a set of all non-null neighbors of point.
+	 * Returns a set of all non-null KNOWN neighbors of point.
 	 */
-	public Set<Node> getNeighbors(Point point) {
+	public Set<Node> getKnownNeighbors(Point point) {
 		Set<Node> result = new HashSet<>();
-		for (Point adjacentPoint : getAdjacentPoints(point)) {
+		for (Point adjacentPoint : getKnownAdjacentPoints(point)) {
 			Node node = nodes.get(adjacentPoint);
 			if (node != null) {
 				result.add(node);
@@ -197,7 +231,7 @@ public class Graph {
           
           	// TODO: avoid hazards
             // expand all children of current node
-            for (Point child : getAdjacentPoints(current)) {
+            for (Point child : getKnownAdjacentPoints(current)) {
               	// graph search; ignore already-stepped-on points
                 if (!parents.containsKey(child)) {
                     if (!nodes.get(child).isDangerous()) {

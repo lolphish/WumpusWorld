@@ -17,8 +17,10 @@
 //                be lost when the tournament runs your code.
 // ======================================================================
 
+import java.util.Collection;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Queue;
 import java.util.Random;
@@ -381,7 +383,7 @@ public class MyAI extends Agent
         if (target == null) {
             throw new WumpusWorldException("received null Node target; expected valid");
         }
-        Set<Point> neighbors = cave.getAdjacentPoints(point);
+        Set<Point> neighbors = cave.getKnownAdjacentPoints(point);
 
         // a wall should only be connected to a valid node on ONE of its ends
         if (neighbors.size() != 1) {
