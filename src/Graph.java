@@ -184,10 +184,14 @@ public class Graph {
       	frontier.add(origin);
       	parents.put(origin, null);
       	
+      	
+      	// if the search stops because the frontier is empty,
+      	// no path was found?
       	while (!frontier.isEmpty()) {
           	// find the least-cost node
           	Point current = frontier.poll();
             if (current.equals(destination)) {
+            		// an optimal (greedy) path has been found
             		break;
             }
           
