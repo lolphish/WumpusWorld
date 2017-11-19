@@ -17,13 +17,9 @@
 //                be lost when the tournament runs your code.
 // ======================================================================
 
-import java.util.Collection;
 import java.util.LinkedList;
-import java.util.List;
-import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Queue;
-import java.util.Random;
 import java.util.Set;
 import java.util.Stack;
 
@@ -33,9 +29,7 @@ import java.util.Stack;
  */
 
 public class MyAI extends Agent
-{
-	private static final Random generator = new Random();
-  
+{  
 	static enum Direction
 	{
 		UP,
@@ -89,6 +83,21 @@ public class MyAI extends Agent
 			wumpusAlive = false;
 		}
 		
+		if (glitter) {
+			climbOut = true;
+			return Action.GRAB;
+		}
+		
+		if (climbOut) {
+			if (currentPoint.atStart()) {
+				return Action.CLIMB;
+			}
+			if (actions.isEmpty()) {
+				Stack<Point> backPath = cave.getPath(currentPoint, Point.getStartingPoint());
+				getActionsFromPoints(backPath);
+			}
+		}
+		
 		if (bump) {
 			// moveForward() adds a new node
 			// if a bump is perceived, a new node was added when it shouldn't have been
@@ -96,15 +105,6 @@ public class MyAI extends Agent
 			// TODO: add right/top wall
 			cave.markNodeAtPoint(currentPoint, Node.Marker.WALL);
 			currentPoint = getLocalOriginPoint(currentPoint);
-		}
-		
-		if (glitter) {
-				climbOut = true;
-			return Action.GRAB;
-		}
-		
-		if (climbOut && currentPoint.atStart()) {
-				return Action.CLIMB;
 		}
 	  
 		// if an upcoming action has been queued, prioritize it
@@ -127,13 +127,16 @@ public class MyAI extends Agent
 		}
 		
 		Action action;
-		if (breeze || stench) {
+		if (breeze || stench) {		
+			markUnexploredNeighborsDangerous(currentPoint);
+			
 			// TODO: go back to where you came from, and move to a non-dangerous node
-			Stack<Point> backPath = cave.getPath(currentPoint, Point.getStartingPoint());
-			action = moveForward();	// PLACEHOLDER
+			goToExploredNeighborOf(currentPoint);
+			action = dequeueAction();
 		}
 		else {
-				action = moveForward();
+			// TODO: go forward only if node in front of you is non-hazardous
+			action = moveForward();
 		}
 		
 		return action;
@@ -205,52 +208,6 @@ public class MyAI extends Agent
 		}
 		currentNode = cave.addNode(currentNode, direction, currentPoint); 
 		return Action.FORWARD;
-	}
-  
-	/* Returns a random Action out of {TURN_LEFT, TURN_RIGHT, FORWARD}.
-	 * The probability of a FORWARD move is greater than a turn.
-	 * Returns the Action.
-	 */
-	private Action getRandomMove() {
-		Action action;
-		int value = generator.nextInt(12);
-		switch (value) {
-				case 0:
-				action = turnLeft();
-				break;
-			case 1:
-				action = turnRight();
-				break;
-			case 2:
-			default:
-				action = moveForward();
-		}
-		return action;
-	}
-	
-	private Action getRandomTurn() {
-		Action action;
-		int value = generator.nextInt(2);
-		switch (value) {
-			case 0:
-				action = turnLeft();
-				break;
-			default:
-				action = turnRight();
-		}
-		return action;
-	}
-	
-	/* Readies the agent to go to the square behind him.
-	 * Returns the first turn.
-	 */
-	private Action goBack() {
-		actions.add(Action.TURN_RIGHT);
-		actions.add(Action.TURN_RIGHT);
-		actions.add(Action.FORWARD);
-		actions.add(Action.TURN_RIGHT);
-		actions.add(Action.TURN_RIGHT);
-		return dequeueAction();
 	}
 	
 	/* Assumes actions is NOT empty.
@@ -343,26 +300,28 @@ public class MyAI extends Agent
 	  /*
 	 * convert stack of point directions to actions and add them to the actions
 	 * queue
+	 * 
+	 * TODO: test this method for walking through multiple Points
 	 */
 	private void getActionsFromPoints(Stack<Point> points) {
 		Direction currentDirection = direction, nextDirection = null;
 		Point currentLocationPoint = currentPoint, nextPoint = null;
-		while(!points.isEmpty()) {
+		while (!points.isEmpty()) {
 			nextPoint = points.pop();
-			switch(currentLocationPoint.getX() - nextPoint.getX()){
+			switch (currentLocationPoint.getX() - nextPoint.getX()){
 				case 1:
-					nextDirection = Direction.RIGHT;
-					break;
-				case -1:
 					nextDirection = Direction.LEFT;
 					break;
+				case -1:
+					nextDirection = Direction.RIGHT;
+					break;
 			}
-			switch(currentLocationPoint.getY() - nextPoint.getY()){
+			switch (currentLocationPoint.getY() - nextPoint.getY()){
 				case 1:
-					nextDirection = Direction.UP;
+					nextDirection = Direction.DOWN;
 					break;
 				case -1:
-					nextDirection = Direction.DOWN;
+					nextDirection = Direction.UP;
 					break;
 			}
 			faceDirection(currentDirection, nextDirection);
@@ -370,7 +329,6 @@ public class MyAI extends Agent
 			currentDirection = nextDirection;
 			currentLocationPoint = nextPoint;
 		}
-		direction = currentDirection;
 	}
 	/*
 	 * Helper function for restoring currentPoint after bumping into a wall.
@@ -390,6 +348,31 @@ public class MyAI extends Agent
 			throw new WumpusWorldException("expected exactly 1 valid neighboring node");
 		}
 		return neighbors.iterator().next();
+	}
+	
+	/* Marks the unexplored neighbors of the Node at 'point' as HAZARDOUS.
+	 * Called on currentPoint when a stench/breeze is perceived. 
+	 */
+	private void markUnexploredNeighborsDangerous(Point point) {
+		for (Node adjacentNode : cave.getKnownNeighbors(currentPoint)) {
+			if (adjacentNode.getMarker() == Node.Marker.UNEXPLORED) {
+				adjacentNode.setMarker(Node.Marker.HAZARDOUS);
+			}
+		}
+	}
+	
+	/* Identifies a neighbor of 'point' that has been marked EXPLORED.
+	 * Adds actions to the actions queue to navigate to that Point.
+	 */
+	private void goToExploredNeighborOf(Point point) {
+		for (Point adjacentPoint : cave.getKnownAdjacentPoints(point)) {
+			Node adjacentNode = cave.getNode(adjacentPoint);
+			if (adjacentNode.getMarker() == Node.Marker.EXPLORED) {
+				Stack<Point> path = cave.getPath(point, adjacentPoint);
+				getActionsFromPoints(path);
+				break;
+			}
+		}
 	}
 
 	// ======================================================================
