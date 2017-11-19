@@ -7,15 +7,27 @@ public class Point {
 	
 	private int x;
 	private int y;
+	private final int minX;
+	private int maxX;
+	private final int minY;
+	private int maxY;
 	
 	public Point(int x, int y) {
 		setX(x);
 		setY(y);
+		this.minX = 1;
+		this.minY = 1;
+		setMaxX(Integer.MAX_VALUE);
+		setMaxY(Integer.MAX_VALUE);
 	}
 	
 	public Point(Point other) {
 		setX(other.getX());
 		setY(other.getY());
+		setMaxX(other.getMaxX());
+		setMaxY(other.getMaxY());
+		minX = other.minX;
+		minY = other.minY;
 	}
 	
 	@Override
@@ -36,6 +48,10 @@ public class Point {
 	public int hashCode() {
 		String asString = String.format("%d%d", getX(), getY());
 		return asString.hashCode();
+	}
+	
+	public boolean outOfBounds() {
+		return getX() < getMinX() || getX() > getMaxX() || getY() < getMinY() || getY() > getMaxY();
 	}
 
 	public int getX() {
@@ -69,5 +85,29 @@ public class Point {
 	
 	public boolean atStart() {
 		return getX() == 1 && getY() == 1;
+	}
+
+	public int getMaxX() {
+		return maxX;
+	}
+
+	public void setMaxX(int maxX) {
+		this.maxX = maxX;
+	}
+
+	public int getMaxY() {
+		return maxY;
+	}
+
+	public void setMaxY(int maxY) {
+		this.maxY = maxY;
+	}
+
+	public int getMinX() {
+		return minX;
+	}
+
+	public int getMinY() {
+		return minY;
 	}
 }

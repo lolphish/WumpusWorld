@@ -17,7 +17,7 @@ public class Node {
 	private Node right;
 	
 	public Node(Marker marker) {
-		setMarker(marker);
+		this.marker = marker;
 		above = null;
 		below = null;
 		left = null;
@@ -30,7 +30,7 @@ public class Node {
 	
 	@Override
 	public String toString() {
-		return String.format("Node(probability=%s)", marker);
+		return String.format("Node(%s)", marker);
 	}
 	
 	public Marker getMarker() {
@@ -41,8 +41,19 @@ public class Node {
 		return marker == marker.HAZARDOUS;
 	}
 	
+	/* Prioritize WALL;
+	 * if this.marker == WALL, don't override it.
+	 *   - useful when MyAI marks neighbors of current node as hazardous
+	 *     upon perceiving a breeze/stench
+	 * Otherwise, set this.marker to the argument marker.
+	 */
 	public void setMarker(Marker marker) {
-		this.marker = marker;
+		switch (this.marker) {
+			case WALL:
+				break;
+			default:
+				this.marker = marker;
+		}
 	}
 
 	public Node getAbove() {

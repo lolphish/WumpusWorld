@@ -89,7 +89,7 @@ public class Graph {
 			Point adjacentPoint = entry.getValue();
 			if (!nodes.containsKey(adjacentPoint)) {
 				Node destination = branchDestinationNode(from, direction);
-				destination.setMarker(Node.Marker.UNEXPLORED);
+				destination.setMarker(adjacentPoint.outOfBounds() ? Node.Marker.WALL : Node.Marker.UNEXPLORED);
 				nodes.put(adjacentPoint, destination);
 			}
 		}
