@@ -54,8 +54,9 @@ public class MyAI extends Agent
 		// YOUR CODE BEGINS
 		// ======================================================================
 		currentPoint = Point.getStartingPoint();		// initialized to (1, 1)
-		currentNode = new Node(Node.Marker.EXPLORED);
-		cave = new Graph(currentNode);
+//		currentNode = new Node(Node.Marker.EXPLORED);
+		currentNode = null;
+		cave = new Graph();
 		
 		hasArrow = true;
 		wumpusAlive = true;
@@ -104,7 +105,7 @@ public class MyAI extends Agent
 			// we can mark this node as a WALL, then update currentPoint to be the node that it came from
 			// TODO: add right/top wall
 			markOutOfBounds();
-			currentNode.addMarker(Node.Marker.WALL);
+			cave.getNode(currentPoint).addMarker(Node.Marker.WALL);
 			currentPoint = getLocalOriginPoint(currentPoint);
 			
 			// TODO: turn to a valid position
@@ -124,7 +125,7 @@ public class MyAI extends Agent
 		}
 		
 		Action action;
-		currentNode.addMarker(Node.Marker.EXPLORED);		
+//		currentNode.addMarker(Node.Marker.EXPLORED);
 		if (breeze || stench) {
 			// TODO: error if a breeze/stench is perceived at the starting point
 			if (currentPoint.atStart()) {
@@ -142,14 +143,18 @@ public class MyAI extends Agent
 			if (stench) {
 				dangers.add(Node.Marker.WUMPUSWARNING);
 			}
-			Point closestPoint = cave.getClosestUnexploredPoint(currentPoint);
-			navigate(currentPoint, closestPoint);
-			action = dequeueAction(dangers);
+			action = addAndGoToClosestPoint(dangers);
+//			currentNode = cave.addNode(currentNode, direction, currentPoint, dangers);
+//			Point closestPoint = cave.getClosestUnexploredPoint(currentPoint);
+//			navigate(currentPoint, closestPoint);
+//			action = dequeueAction(dangers);
 		}
 		else {
-			Point closestPoint = cave.getClosestUnexploredPoint(currentPoint);
-			navigate(currentPoint, closestPoint);
-			action = dequeueAction(dangers);
+			action = addAndGoToClosestPoint(dangers);
+//			currentNode = cave.addNode(currentNode, direction, currentPoint, dangers);
+//			Point closestPoint = cave.getClosestUnexploredPoint(currentPoint);
+//			navigate(currentPoint, closestPoint);
+//			action = dequeueAction(dangers);
 		}
 		
 		return action;
@@ -219,7 +224,6 @@ public class MyAI extends Agent
 				currentPoint.addX(-1);
 				break;
 		}
-		currentNode = cave.addNode(currentNode, direction, currentPoint, dangers); 
 		return Action.FORWARD;
 	}
 	
@@ -402,6 +406,22 @@ public class MyAI extends Agent
 				break;
 		}
 		cave.deleteOutOfBounds();
+	}
+	
+	/* Convenience method.
+	 * Adds current point, finds the closest point, and returns the first necessary Action to take.
+	 * If no closest point is found, begins navigating back to the start.
+	 */
+	private Action addAndGoToClosestPoint(Set<Node.Marker> dangers) {
+		currentNode = cave.addNode(currentNode, direction, currentPoint, dangers);
+		Point closestPoint = cave.getClosestUnexploredPoint(currentPoint);
+		if (closestPoint == null) {
+			climbOut = true;
+			actions.clear();
+			return getAction(false, false, false, false, false);
+		}
+		navigate(currentPoint, closestPoint);
+		return dequeueAction(dangers);
 	}
 
 	// ======================================================================

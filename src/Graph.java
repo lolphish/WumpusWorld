@@ -38,17 +38,24 @@ public class Graph {
 	 *   
 	 * @param destinationPoint - has already been updated to the coordinates of destination
 	 */
-	public Node addNode(Node origin, MyAI.Direction direction, Point destinationPoint, Set<Node.Marker> dangers) {
-		Node destination = getAdjacentNode(origin, direction);
-		if (destination == null) {
-			destination = branchDestinationNode(origin, direction);
+	public Node addNode(Node node, MyAI.Direction direction, Point currentPoint, Set<Node.Marker> dangers) {
+		Node destination;
+		// for starting node
+		if (node == null) {
+			destination = new Node(Node.Marker.EXPLORED);
+			Point copyPoint = new Point(currentPoint);
+			nodes.put(copyPoint, destination);
+		}
+		else if ((destination = getAdjacentNode(node, direction)) == null) {
+			destination = branchDestinationNode(node, direction);
 			
 			// insert a copy of currentPoint into the map;
 			// otherwise its x/y values will update inside the map
-			Point copyPoint = new Point(destinationPoint);
+			Point copyPoint = new Point(currentPoint);
 			nodes.put(copyPoint, destination);
 		}
-		expandUnexploredNeighbors(destination, destinationPoint, dangers);
+		destination.addMarker(Node.Marker.EXPLORED);
+		expandUnexploredNeighbors(destination, currentPoint, dangers);
 //		setNeighbors(copyPoint, destination);
 		return destination;
 	}
@@ -107,7 +114,9 @@ public class Graph {
 				}
 				else {
 					destination.addMarker(Node.Marker.UNEXPLORED);
-					unexplored.add(adjacentPoint);
+					if (dangers.isEmpty()) {
+						unexplored.add(adjacentPoint);
+					}
 				}
 				for (Node.Marker marker : dangers) {
 					destination.addMarker(marker);
