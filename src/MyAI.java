@@ -103,6 +103,7 @@ public class MyAI extends Agent
 			// if a bump is perceived, a new node was added when it shouldn't have been
 			// we can mark this node as a WALL, then update currentPoint to be the node that it came from
 			// TODO: add right/top wall
+			markOutOfBounds();
 			currentNode.addMarker(Node.Marker.WALL);
 			currentPoint = getLocalOriginPoint(currentPoint);
 			
@@ -124,7 +125,7 @@ public class MyAI extends Agent
 		
 		Action action;
 		currentNode.addMarker(Node.Marker.EXPLORED);		
-		if (breeze || stench) {		
+		if (breeze || stench) {
 			// TODO: error if a breeze/stench is perceived at the starting point
 			if (currentPoint.atStart()) {
 				// climb out?
@@ -141,7 +142,8 @@ public class MyAI extends Agent
 			if (stench) {
 				dangers.add(Node.Marker.WUMPUSWARNING);
 			}
-			goToExploredNeighborOf(currentPoint);
+			Point closestPoint = cave.getClosestUnexploredPoint(currentPoint);
+			navigate(currentPoint, closestPoint);
 			action = dequeueAction(dangers);
 		}
 		else {
@@ -388,8 +390,21 @@ public class MyAI extends Agent
 		getActionsFromPoints(path);
 	}
 
+	private void markOutOfBounds() {
+		switch (direction) {
+			case RIGHT:
+				Point.setMaxX(currentPoint.getX() - 1);
+				break;
+			case UP:
+				Point.setMaxY(currentPoint.getY() - 1);
+				break;
+			default:
+				break;
+		}
+		cave.deleteOutOfBounds();
+	}
+
 	// ======================================================================
 	// YOUR CODE ENDS
 	// ======================================================================
 }
-  

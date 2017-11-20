@@ -1,8 +1,7 @@
-import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.List;
+import java.util.Iterator;
 import java.util.Map;
 import java.util.PriorityQueue;
 import java.util.Queue;
@@ -22,7 +21,9 @@ public class Graph {
 	public Graph(Node startingNode) {
 		this();
 		Point initialPoint = new Point(1, 1);
-		nodes.put(initialPoint, startingNode);
+		Node copy = new Node(startingNode);
+		nodes.put(initialPoint, copy);
+		expandUnexploredNeighbors(copy, initialPoint, new HashSet<>());
 	}
 	
 	public int size() {
@@ -87,8 +88,8 @@ public class Graph {
 		for (Map.Entry<MyAI.Direction, Point> entry : getAdjacentDirectionalPoints(point).entrySet()) {
 			MyAI.Direction direction = entry.getKey();
 			Point adjacentPoint = entry.getValue();
-          
-        	// If the existing node has the same warning before, then it confirms the danger
+
+			// If the existing node has the same warning before, then it confirms the danger
 			if (nodes.containsKey(adjacentPoint)) {
 				for (Node.Marker marker : dangers) {
 					if (marker == Node.Marker.PITWARNING && nodes.get(adjacentPoint).containsMarker(marker)) {
@@ -98,18 +99,19 @@ public class Graph {
 						nodes.get(adjacentPoint).addMarker(Node.Marker.WUMPUS);
 					}
 				}
-        	} else {
-          		Node destination = branchDestinationNode(from, direction);
-            	if (adjacentPoint.outOfBounds()) {
-                	destination.addMarker(Node.Marker.WALL);
-                }
-            	else {
-                	destination.addMarker(Node.Marker.UNEXPLORED);
-                	unexplored.add(adjacentPoint);
-                }
-                for (Node.Marker marker : dangers) {
-                  	destination.addMarker(marker);
-                  }
+			}
+			else {
+				Node destination = branchDestinationNode(from, direction);
+				if (adjacentPoint.outOfBounds()) {
+					destination.addMarker(Node.Marker.WALL);
+				}
+				else {
+					destination.addMarker(Node.Marker.UNEXPLORED);
+					unexplored.add(adjacentPoint);
+				}
+				for (Node.Marker marker : dangers) {
+					destination.addMarker(marker);
+				}
 				nodes.put(adjacentPoint, destination);
 			}
 		}
@@ -215,22 +217,22 @@ public class Graph {
 		return Math.abs(point1.getX() - point2.getX()) + Math.abs(point1.getY() - point2.getY());
 	}
 	
-  	/*
+	/*
      * Finds closest unexplored node from currentValue
      */
-  	public Point getClosestUnexploredPoint(Point currentPoint) {
-      	Point minPoint = null;
-      	int minManhattanDistance = Integer.MAX_VALUE; //getManhattanDistance(currentPoint, minPoint);
-      	for (Point point : unexplored) {
-      		int tempManhattanDistance = getManhattanDistance(currentPoint, point);
-      		if (tempManhattanDistance < minManhattanDistance) {
-      			minPoint = point;
-      			minManhattanDistance = tempManhattanDistance;
-      		}
-        }
-      	unexplored.remove(minPoint);
-        return minPoint;
-  	}
+	public Point getClosestUnexploredPoint(Point currentPoint) {
+		Point minPoint = null;
+		int minManhattanDistance = Integer.MAX_VALUE; //getManhattanDistance(currentPoint, minPoint);
+		for (Point point : unexplored) {
+			int tempManhattanDistance = getManhattanDistance(currentPoint, point);
+			if (tempManhattanDistance < minManhattanDistance) {
+				minPoint = point;
+				minManhattanDistance = tempManhattanDistance;
+			}
+		}
+		unexplored.remove(minPoint);
+		return minPoint;
+	}
   
 	/* 
 	 * Performs a greedy best-first search from origin to destination.
@@ -278,6 +280,15 @@ public class Graph {
 		
 		return result;
 	}
+	
+	public void deleteOutOfBounds() {
+		for (Iterator<Point> it = unexplored.iterator(); it.hasNext(); ) {
+			Point point = it.next();
+			if (point.outOfBounds()) {
+				it.remove();
+			}
+		}
+	}
   
 	/* 
 	 * Comparator to order by increasing Manhattan distance (i.e., least to greatest).
@@ -298,6 +309,3 @@ public class Graph {
 	}
   	
 }
-
-
-
