@@ -4,9 +4,10 @@ public class Node {
 	static enum Marker {
 		UNEXPLORED,
 		EXPLORED,
-		BREEZE,
-		STENCH,
-		HAZARDOUS,
+		PITWARNING,
+		PIT,
+		WUMPUSWARNING,
+		WUMPUS,
 		WALL
 	}
 	
@@ -38,7 +39,7 @@ public class Node {
 	}
 	
 	public boolean isDangerous() {
-		return marker == marker.HAZARDOUS;
+		return marker == marker.PIT || marker == marker.WUMPUS;
 	}
 	
 	/* Prioritize WALL;
