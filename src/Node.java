@@ -57,14 +57,18 @@ public class Node {
 		return markers.contains(Marker.PIT) || markers.contains(Marker.WUMPUS) || markers.contains(Marker.PITWARNING) || markers.contains(Marker.WUMPUSWARNING);
 	}
 	
-	/* Prioritize WALL;
-	 * if this.marker == WALL, don't override it.
-	 *   - useful when MyAI marks neighbors of current node as hazardous
-	 *     upon perceiving a breeze/stench
-	 * Otherwise, set this.marker to the argument marker.
+	/* If trying to mark the node as EXPLORED,
+	 * automatically unmark it as UNEXPLORED.
 	 */
 	public void addMarker(Marker marker) {
+		if (marker == Marker.EXPLORED && containsMarker(Marker.UNEXPLORED)) {
+			removeMarker(Marker.UNEXPLORED);
+		}
 		markers.add(marker);
+	}
+	
+	public void removeMarker(Marker marker) {
+		markers.remove(marker);
 	}
 
 	public Node getAbove() {
