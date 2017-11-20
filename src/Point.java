@@ -7,27 +7,19 @@ public class Point {
 	
 	private int x;
 	private int y;
-	private final int minX;
-	private int maxX;
-	private final int minY;
-	private int maxY;
+	private static final int minX = 1;
+	private static int maxX = Integer.MAX_VALUE;
+	private static final int minY = 1;
+	private static int maxY = Integer.MAX_VALUE;
 	
 	public Point(int x, int y) {
 		setX(x);
 		setY(y);
-		this.minX = 1;
-		this.minY = 1;
-		setMaxX(Integer.MAX_VALUE);
-		setMaxY(Integer.MAX_VALUE);
 	}
 	
 	public Point(Point other) {
 		setX(other.getX());
 		setY(other.getY());
-		setMaxX(other.getMaxX());
-		setMaxY(other.getMaxY());
-		minX = other.minX;
-		minY = other.minY;
 	}
 	
 	@Override
@@ -87,27 +79,27 @@ public class Point {
 		return getX() == 1 && getY() == 1;
 	}
 
-	public int getMaxX() {
+	public static int getMaxX() {
 		return maxX;
 	}
 
-	public void setMaxX(int maxX) {
-		this.maxX = maxX;
+	public static void setMaxX(int maxX) {
+		Point.maxX = maxX;
 	}
 
-	public int getMaxY() {
+	public static int getMaxY() {
 		return maxY;
 	}
 
-	public void setMaxY(int maxY) {
-		this.maxY = maxY;
+	public static void setMaxY(int maxY) {
+		Point.maxY = maxY;
 	}
 
-	public int getMinX() {
+	public static int getMinX() {
 		return minX;
 	}
 
-	public int getMinY() {
+	public static int getMinY() {
 		return minY;
 	}
 }
