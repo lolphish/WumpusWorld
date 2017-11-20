@@ -12,9 +12,11 @@ import java.util.Stack;
 
 public class Graph {
 	private Map<Point,Node> nodes; // Map to store points
+  	private Set<Point> unexplored;
 	
 	public Graph() {
 		nodes = new HashMap<>();
+      	unexplored = new HashSet<>();
 	}
 	
 	public Graph(Node startingNode) {
@@ -33,21 +35,19 @@ public class Graph {
 	 * If there already is a node in "from's" direction, does nothing;
 	 *   returns that existing node. 
 	 *   
-	 * @param currentPoint - has already been updated to the coordinates of destination
+	 * @param destinationPoint - has already been updated to the coordinates of destination
 	 */
-	public Node addNode(Node origin, MyAI.Direction direction, Point currentPoint) {
+	public Node addNode(Node origin, MyAI.Direction direction, Point destinationPoint, Set<Node.Marker> dangers) {
 		Node destination = getAdjacentNode(origin, direction);
-		if (destination != null) {
-			return destination;
+		if (destination == null) {
+			destination = branchDestinationNode(origin, direction);
+			
+			// insert a copy of currentPoint into the map;
+			// otherwise its x/y values will update inside the map
+			Point copyPoint = new Point(destinationPoint);
+			nodes.put(copyPoint, destination);
 		}
-		
-		destination = branchDestinationNode(origin, direction);
-		
-		// insert a copy of currentPoint into the map;
-		// otherwise its x/y values will update inside the map
-		Point copyPoint = new Point(currentPoint);
-		nodes.put(copyPoint, destination);
-		expandUnexploredNeighbors(destination, currentPoint);
+		expandUnexploredNeighbors(destination, destinationPoint, dangers);
 //		setNeighbors(copyPoint, destination);
 		return destination;
 	}
@@ -83,13 +83,33 @@ public class Graph {
 	
 	/* Expands the immediate unknown neighbors of the argument node/point, marking them as UNEXPLORED.
 	 */
-	private void expandUnexploredNeighbors(Node from, Point point) {
+	private void expandUnexploredNeighbors(Node from, Point point, Set<Node.Marker> dangers) {
 		for (Map.Entry<MyAI.Direction, Point> entry : getAdjacentDirectionalPoints(point).entrySet()) {
 			MyAI.Direction direction = entry.getKey();
 			Point adjacentPoint = entry.getValue();
-			if (!nodes.containsKey(adjacentPoint)) {
-				Node destination = branchDestinationNode(from, direction);
-				destination.setMarker(adjacentPoint.outOfBounds() ? Node.Marker.WALL : Node.Marker.UNEXPLORED);
+          
+        	// If the existing node has the same warning before, then it confirms the danger
+			if (nodes.containsKey(adjacentPoint)) {
+				for (Node.Marker marker : dangers) {
+					if (marker == Node.Marker.PITWARNING && nodes.get(adjacentPoint).containsMarker(marker)) {
+						nodes.get(adjacentPoint).addMarker(Node.Marker.PIT);
+					}
+					else if (marker == Node.Marker.WUMPUSWARNING && nodes.get(adjacentPoint).containsMarker(marker)) {
+						nodes.get(adjacentPoint).addMarker(Node.Marker.WUMPUS);
+					}
+				}
+        	} else {
+          		Node destination = branchDestinationNode(from, direction);
+            	if (adjacentPoint.outOfBounds()) {
+                	destination.addMarker(Node.Marker.WALL);
+                }
+            	else {
+                	destination.addMarker(Node.Marker.UNEXPLORED);
+                	unexplored.add(adjacentPoint);
+                }
+                for (Node.Marker marker : dangers) {
+                  	destination.addMarker(marker);
+                  }
 				nodes.put(adjacentPoint, destination);
 			}
 		}
@@ -184,16 +204,6 @@ public class Graph {
 		return result;
 	}
 	
-	/* Marks the node at 'point' with 'marker', if it exists.
-	 * Does nothing if it doesn't exist.
-	 */
-	public void markNodeAtPoint(Point point, Node.Marker marker) {
-		Node target = nodes.get(point);
-		if (target != null) {
-			target.setMarker(marker);
-		}
-	}
-	
 	/* Public accessor method for retrieving a node by its point.
 	 * Returns the Node, if it exists, or null if it doesn't.
 	 */
@@ -202,9 +212,26 @@ public class Graph {
 	}
 	
 	public static int getManhattanDistance(Point point1, Point point2) {
-		return Math.abs(point1.getX() - point2.getX()) + Math.abs(point1.getY() + point2.getY());
+		return Math.abs(point1.getX() - point2.getX()) + Math.abs(point1.getY() - point2.getY());
 	}
 	
+  	/*
+     * Finds closest unexplored node from currentValue
+     */
+  	public Point getClosestUnexploredPoint(Point currentPoint) {
+      	Point minPoint = null;
+      	int minManhattanDistance = Integer.MAX_VALUE; //getManhattanDistance(currentPoint, minPoint);
+      	for (Point point : unexplored) {
+      		int tempManhattanDistance = getManhattanDistance(currentPoint, point);
+      		if (tempManhattanDistance < minManhattanDistance) {
+      			minPoint = point;
+      			minManhattanDistance = tempManhattanDistance;
+      		}
+        }
+      	unexplored.remove(minPoint);
+        return minPoint;
+  	}
+  
 	/* 
 	 * Performs a greedy best-first search from origin to destination.
 	 * Returns a Stack of Points of the discovered path.
@@ -269,6 +296,8 @@ public class Graph {
 			return getManhattanDistance(a, destination) - getManhattanDistance(b, destination);
 		}
 	}
+  	
 }
+
 
 

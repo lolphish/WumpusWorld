@@ -17,6 +17,7 @@
 //                be lost when the tournament runs your code.
 // ======================================================================
 
+import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.NoSuchElementException;
 import java.util.Queue;
@@ -93,8 +94,7 @@ public class MyAI extends Agent
 				return Action.CLIMB;
 			}
 			if (actions.isEmpty()) {
-				Stack<Point> backPath = cave.getPath(currentPoint, Point.getStartingPoint());
-				getActionsFromPoints(backPath);
+				navigate(currentPoint, Point.getStartingPoint());
 			}
 		}
 		
@@ -103,13 +103,17 @@ public class MyAI extends Agent
 			// if a bump is perceived, a new node was added when it shouldn't have been
 			// we can mark this node as a WALL, then update currentPoint to be the node that it came from
 			// TODO: add right/top wall
-			cave.markNodeAtPoint(currentPoint, Node.Marker.WALL);
+			currentNode.addMarker(Node.Marker.WALL);
 			currentPoint = getLocalOriginPoint(currentPoint);
+			
+			// TODO: turn to a valid position
 		}
-	  
+      
+		Set<Node.Marker> dangers = new HashSet<>();
+
 		// if an upcoming action has been queued, prioritize it
 		if (!actions.isEmpty()) {
-			return dequeueAction();
+			return dequeueAction(dangers);
 		}
 		
 		// attempt to kill the Wumpus
@@ -118,25 +122,32 @@ public class MyAI extends Agent
 //            return Action.SHOOT;
 		}
 		
-		currentNode.setMarker(Node.Marker.EXPLORED);
-		if (breeze) {
-			currentNode.setMarker(Node.Marker.BREEZE);
-		}
-		if (stench) {
-			currentNode.setMarker(Node.Marker.STENCH);
-		}
-		
 		Action action;
+		currentNode.addMarker(Node.Marker.EXPLORED);		
 		if (breeze || stench) {		
-			markUnexploredNeighborsDangerous(currentPoint);
+			// TODO: error if a breeze/stench is perceived at the starting point
+			if (currentPoint.atStart()) {
+				// climb out?
+				climbOut = true;
+				return getAction(stench, breeze, glitter, bump, scream);
+			}
 			
-			// TODO: go back to where you came from, and move to a non-dangerous node
+			// TODO: what if a breeze and stench exist on the same point?
+			// after the wumpus dies, the node would no longer be marked WUMPUSWARNING
+			// but might still need to be marked PITWARNING
+			if (breeze) {
+				dangers.add(Node.Marker.PITWARNING);
+			}
+			if (stench) {
+				dangers.add(Node.Marker.WUMPUSWARNING);
+			}
 			goToExploredNeighborOf(currentPoint);
-			action = dequeueAction();
+			action = dequeueAction(dangers);
 		}
 		else {
-			// TODO: go forward only if node in front of you is non-hazardous
-			action = moveForward();
+			Point closestPoint = cave.getClosestUnexploredPoint(currentPoint);
+			navigate(currentPoint, closestPoint);
+			action = dequeueAction(dangers);
 		}
 		
 		return action;
@@ -191,7 +202,7 @@ public class MyAI extends Agent
 		return Action.TURN_RIGHT;
 	}
 	
-	private Action moveForward() {
+	private Action moveForward(Set<Node.Marker> dangers) {
 		switch (direction) {
 			case UP:
 				currentPoint.addY(1);
@@ -206,14 +217,14 @@ public class MyAI extends Agent
 				currentPoint.addX(-1);
 				break;
 		}
-		currentNode = cave.addNode(currentNode, direction, currentPoint); 
+		currentNode = cave.addNode(currentNode, direction, currentPoint, dangers); 
 		return Action.FORWARD;
 	}
 	
 	/* Assumes actions is NOT empty.
 	 * Pops the next Action from the actions queue, and returns it.
 	 */
-	private Action dequeueAction() throws NoSuchElementException {
+	private Action dequeueAction(Set<Node.Marker> dangers) throws NoSuchElementException {
 		Action nextAction = actions.remove();
 		switch (nextAction) {
 			case TURN_LEFT:
@@ -223,7 +234,7 @@ public class MyAI extends Agent
 			nextAction = turnRight();
 			break;
 		case FORWARD:
-			nextAction = moveForward();
+			nextAction = moveForward(dangers);
 		default:
 			break;
 		}
@@ -341,25 +352,20 @@ public class MyAI extends Agent
 		if (target == null) {
 			throw new WumpusWorldException("received null Node target; expected valid");
 		}
-		Set<Point> neighbors = cave.getKnownAdjacentPoints(point);
-
-		// a wall should only be connected to a valid node on ONE of its ends
-		if (neighbors.size() != 1) {
-			throw new WumpusWorldException("expected exactly 1 valid neighboring node");
+		for (Point adjacentPoint : cave.getKnownAdjacentPoints(point)) {
+			Node adjacentNode = cave.getNode(adjacentPoint);
+			if (adjacentNode.containsMarker(Node.Marker.EXPLORED)) {
+				return adjacentPoint;
+			}
 		}
-		return neighbors.iterator().next();
+		
+		// the wall had no explored neighbors, which should NEVER happen
+		throw new WumpusWorldException("expected exactly 1 valid neighboring node");
 	}
 	
 	/* Marks the unexplored neighbors of the Node at 'point' as HAZARDOUS.
 	 * Called on currentPoint when a stench/breeze is perceived. 
 	 */
-	private void markUnexploredNeighborsDangerous(Point point) {
-		for (Node adjacentNode : cave.getKnownNeighbors(currentPoint)) {
-			if (adjacentNode.getMarker() == Node.Marker.UNEXPLORED) {
-				adjacentNode.setMarker(Node.Marker.HAZARDOUS);
-			}
-		}
-	}
 	
 	/* Identifies a neighbor of 'point' that has been marked EXPLORED.
 	 * Adds actions to the actions queue to navigate to that Point.
@@ -367,12 +373,19 @@ public class MyAI extends Agent
 	private void goToExploredNeighborOf(Point point) {
 		for (Point adjacentPoint : cave.getKnownAdjacentPoints(point)) {
 			Node adjacentNode = cave.getNode(adjacentPoint);
-			if (adjacentNode.getMarker() == Node.Marker.EXPLORED) {
-				Stack<Point> path = cave.getPath(point, adjacentPoint);
-				getActionsFromPoints(path);
+			if (adjacentNode.containsMarker(Node.Marker.EXPLORED)) {
+				navigate(point, adjacentPoint);
 				break;
 			}
 		}
+	}
+
+	/* Navigates a path from origin to destination.
+     * Adds all necessary actions to the actions queue.
+	 */
+	private void navigate(Point origin, Point destination) {
+		Stack<Point> path = cave.getPath(origin, destination);
+		getActionsFromPoints(path);
 	}
 
 	// ======================================================================
