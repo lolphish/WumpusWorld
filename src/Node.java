@@ -1,3 +1,4 @@
+import java.util.HashSet;
 
 public class Node {
 	
@@ -11,14 +12,15 @@ public class Node {
 		WALL
 	}
 	
-	private Marker marker;
+	private HashSet<Marker> markers;
 	private Node above;
 	private Node below;
 	private Node left;
 	private Node right;
 	
 	public Node(Marker marker) {
-		this.marker = marker;
+
+		markers.add(marker);
 		above = null;
 		below = null;
 		left = null;
@@ -31,15 +33,19 @@ public class Node {
 	
 	@Override
 	public String toString() {
-		return String.format("Node(%s)", marker);
+		return String.format("Node(%s)", markers);
 	}
 	
-	public Marker getMarker() {
-		return marker;
+	public HashSet<Marker> getMarkers() {
+		return markers;
+	}
+	
+	public boolean containsMarker(Marker marker) {
+		return markers.contains(marker);
 	}
 	
 	public boolean isDangerous() {
-		return marker == marker.PIT || marker == marker.WUMPUS;
+		return markers.contains(Marker.PIT) || markers.contains(Marker.WUMPUS) || markers.contains(Marker.PITWARNING) || markers.contains(Marker.WUMPUSWARNING);
 	}
 	
 	/* Prioritize WALL;
@@ -48,13 +54,8 @@ public class Node {
 	 *     upon perceiving a breeze/stench
 	 * Otherwise, set this.marker to the argument marker.
 	 */
-	public void setMarker(Marker marker) {
-		switch (this.marker) {
-			case WALL:
-				break;
-			default:
-				this.marker = marker;
-		}
+	public void setMarkers(Marker marker) {
+		markers.add(marker);
 	}
 
 	public Node getAbove() {
