@@ -1,4 +1,5 @@
 import java.util.HashSet;
+import java.util.Set;
 
 public class Node {
 	
@@ -12,14 +13,14 @@ public class Node {
 		WALL
 	}
 	
-	private HashSet<Marker> markers;
+	private Set<Marker> markers;
 	private Node above;
 	private Node below;
 	private Node left;
 	private Node right;
 	
 	public Node(Marker marker) {
-
+		markers = new HashSet<>();
 		markers.add(marker);
 		above = null;
 		below = null;
@@ -31,12 +32,20 @@ public class Node {
 		this(Marker.UNEXPLORED);
 	}
 	
+	public Node(Node other) {
+		markers = other.markers;
+		setAbove(above);
+		setBelow(below);
+		setLeft(left);
+		setRight(right);
+	}
+	
 	@Override
 	public String toString() {
 		return String.format("Node(%s)", markers);
 	}
 	
-	public HashSet<Marker> getMarkers() {
+	public Set<Marker> getMarkers() {
 		return markers;
 	}
 	
@@ -54,7 +63,7 @@ public class Node {
 	 *     upon perceiving a breeze/stench
 	 * Otherwise, set this.marker to the argument marker.
 	 */
-	public void setMarkers(Marker marker) {
+	public void addMarker(Marker marker) {
 		markers.add(marker);
 	}
 
