@@ -46,15 +46,19 @@ public class Graph {
 			Point copyPoint = new Point(currentPoint);
 			nodes.put(copyPoint, destination);
 		}
-		else if ((destination = getAdjacentNode(node, direction)) == null) {
-			destination = branchDestinationNode(node, direction);
-			
-			// insert a copy of currentPoint into the map;
-			// otherwise its x/y values will update inside the map
-			Point copyPoint = new Point(currentPoint);
-			nodes.put(copyPoint, destination);
+		else {
+			destination = getAdjacentNode(node, direction);
+			if (destination == null) {
+				destination = branchDestinationNode(node, direction);
+				
+				// insert a copy of currentPoint into the map;
+				// otherwise its x/y values will update inside the map
+				Point copyPoint = new Point(currentPoint);
+				nodes.put(copyPoint, destination);	
+			}
 		}
-		destination.addMarker(Node.Marker.EXPLORED);
+		
+//		destination.addMarker(Node.Marker.EXPLORED);
 		expandUnexploredNeighbors(destination, currentPoint, dangers);
 //		setNeighbors(copyPoint, destination);
 		return destination;
@@ -98,16 +102,27 @@ public class Graph {
 
 			// If the existing node has the same warning before, then it confirms the danger
 			if (nodes.containsKey(adjacentPoint)) {
-				for (Node.Marker marker : dangers) {
-					if (marker == Node.Marker.PITWARNING && nodes.get(adjacentPoint).containsMarker(marker)) {
-						nodes.get(adjacentPoint).addMarker(Node.Marker.PIT);
-					}
-					else if (marker == Node.Marker.WUMPUSWARNING && nodes.get(adjacentPoint).containsMarker(marker)) {
-						nodes.get(adjacentPoint).addMarker(Node.Marker.WUMPUS);
-                      	removeWumpusWarning();
-                      	// function to delete all WUMPUS WARNINGS AT PLACES NOT WUMPUS
-					}
-				}
+            		Node adjacentNode = nodes.get(adjacentPoint);
+              
+              	if (dangers.contains(Node.Marker.PITWARNING) && adjacentNode.containsMarker(Node.Marker.PITWARNING)) {
+                    adjacentNode.addMarker(Node.Marker.PIT);
+                }
+                else if (!dangers.contains(Node.Marker.PITWARNING) && adjacentNode.containsMarker(Node.Marker.PITWARNING)) { // if current point does not have a pitwarning, all potential pitwarnings should be removed
+                	adjacentNode.removeMarker(Node.Marker.PITWARNING);
+                  	if (!adjacentNode.isDangerous())
+                    	unexplored.add(adjacentPoint);
+                }
+                if (dangers.contains(Node.Marker.WUMPUSWARNING) && adjacentNode.containsMarker(Node.Marker.WUMPUSWARNING)) {
+                    adjacentNode.addMarker(Node.Marker.WUMPUS);
+                    removeWumpusWarning();
+                    // function to delete all WUMPUS WARNINGS AT PLACES NOT WUMPUS
+                }
+              	else if(!dangers.contains(Node.Marker.WUMPUSWARNING) && adjacentNode.containsMarker(Node.Marker.WUMPUSWARNING)){ // if current point does not have a wumpuswarning, remove all wumpuswarnings around
+                    adjacentNode.removeMarker(Node.Marker.WUMPUSWARNING);
+                  	if (!adjacentNode.isDangerous())
+                    	unexplored.add(adjacentPoint);
+              	}
+              	// if current node does not have any
 			}
 			else {
 				Node destination = branchDestinationNode(from, direction);

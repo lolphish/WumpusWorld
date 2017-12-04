@@ -41,6 +41,7 @@ public class MyAI extends Agent
   
 	private Direction direction;
 	private Point currentPoint;
+	private Point lastPoint;
 	private Node currentNode;
 	private Graph cave;
 	private Queue<Action> actions;
@@ -55,6 +56,7 @@ public class MyAI extends Agent
 		// YOUR CODE BEGINS
 		// ======================================================================
 		currentPoint = Point.getStartingPoint();		// initialized to (1, 1)
+		lastPoint = null;
 //		currentNode = new Node(Node.Marker.EXPLORED);
 		currentNode = null;
 		cave = new Graph();
@@ -109,7 +111,7 @@ public class MyAI extends Agent
 			// TODO: add right/top wall
 			markOutOfBounds();
 			cave.getNode(currentPoint).addMarker(Node.Marker.WALL);
-			currentPoint = getLocalOriginPoint(currentPoint);
+			currentPoint = new Point(lastPoint);
 		}
       
 		Set<Node.Marker> dangers = new HashSet<>();
@@ -132,13 +134,12 @@ public class MyAI extends Agent
 		
 		Action action;
 		if (breeze || stench) {
-			if (currentPoint.atStart()) {
-				// climb out?
-				climbOut = true;
-				return getAction(stench, breeze, glitter, bump, scream);
-			}
-			
 			if (breeze) {
+				if (currentPoint.atStart()) {
+					// climb out?
+					climbOut = true;
+					return getAction(stench, breeze, glitter, bump, scream);
+				}
 				dangers.add(Node.Marker.PITWARNING);
 			}
 			if (stench && wumpusAlive) {
@@ -158,6 +159,7 @@ public class MyAI extends Agent
 //			action = dequeueAction(dangers);
 		}
 		
+		// update currentNode to be the node you are about to step on
 		currentNode = cave.addNode(currentNode, direction, currentPoint, dangers);
 		
 		if (justShot) {
@@ -236,6 +238,7 @@ public class MyAI extends Agent
 	}
 	
 	private Action moveForward() {
+		lastPoint = new Point(currentPoint);
 		switch (direction) {
 			case UP:
 				currentPoint.addY(1);
@@ -372,27 +375,6 @@ public class MyAI extends Agent
 			currentDirection = nextDirection;
 			currentLocationPoint = nextPoint;
 		}
-	}
-	/*
-	 * Helper function for restoring currentPoint after bumping into a wall.
-	 * After perceiving a bump, currentPoint has already been updated to out-of-bounds.
-	 * Returns the valid Point that it came from.
-	 * example: currentPoint = getLocalOriginPoint(currentPoint);
-	 */
-	private Point getLocalOriginPoint(Point point) {
-		Node target = cave.getNode(point);
-		if (target == null) {
-			throw new WumpusWorldException("received null Node target; expected valid");
-		}
-		for (Point adjacentPoint : cave.getKnownAdjacentPoints(point)) {
-			Node adjacentNode = cave.getNode(adjacentPoint);
-			if (!adjacentPoint.outOfBounds() && adjacentNode.containsMarker(Node.Marker.EXPLORED)) {
-				return adjacentPoint;
-			}
-		}
-		
-		// the wall had no explored neighbors, which should NEVER happen
-		throw new WumpusWorldException("expected exactly 1 valid neighboring node");
 	}
 	
 	/* Marks the unexplored neighbors of the Node at 'point' as HAZARDOUS.
