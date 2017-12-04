@@ -54,7 +54,7 @@ public class Node {
 	}
 	
 	public boolean isDangerous() {
-		return markers.contains(Marker.PIT) || markers.contains(Marker.WUMPUS) || markers.contains(Marker.PITWARNING) || markers.contains(Marker.WUMPUSWARNING);
+		return markers.contains(Marker.PIT) || markers.contains(Marker.WUMPUS) || markers.contains(Marker.PITWARNING) || markers.contains(Marker.WUMPUSWARNING) || markers.contains(Marker.WALL);
 	}
 	
 	/* If trying to mark the node as EXPLORED,
