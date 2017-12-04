@@ -167,7 +167,7 @@ public class MyAI extends Agent
 			if (neighbor != null) {
 				neighbor.removeMarker(Node.Marker.WUMPUSWARNING);
 				Point adjacentPoint = cave.getAdjacentPoint(currentPoint, direction);
-				if (!neighbor.containsMarker(Node.Marker.PITWARNING)) {
+				if (!neighbor.isDangerous()) {
 					cave.addToUnexplored(adjacentPoint);	
 				}
 			}

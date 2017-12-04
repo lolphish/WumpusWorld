@@ -368,6 +368,8 @@ public class Graph {
 			Node node = entry.getValue();
 			if (node.containsMarker(Node.Marker.WUMPUSWARNING) && !node.containsMarker(Node.Marker.WUMPUS)) {
 				node.removeMarker(Node.Marker.WUMPUSWARNING);
+				
+				// TODO: if (!node.isDangerous()) ?
 				if (!node.containsMarker(Node.Marker.PITWARNING))
 					unexplored.add(point);
 			}
