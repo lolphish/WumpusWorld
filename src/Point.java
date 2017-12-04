@@ -8,9 +8,9 @@ public class Point {
 	private int x;
 	private int y;
 	private static final int minX = 1;
-	private static int maxX = Integer.MAX_VALUE;
+	private static int maxX = 7;
 	private static final int minY = 1;
-	private static int maxY = Integer.MAX_VALUE;
+	private static int maxY = 7;
 	
 	public Point(int x, int y) {
 		setX(x);
