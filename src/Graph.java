@@ -104,6 +104,8 @@ public class Graph {
 					}
 					else if (marker == Node.Marker.WUMPUSWARNING && nodes.get(adjacentPoint).containsMarker(marker)) {
 						nodes.get(adjacentPoint).addMarker(Node.Marker.WUMPUS);
+                      	removeWumpusWarning();
+                      	// function to delete all WUMPUS WARNINGS AT PLACES NOT WUMPUS
 					}
 				}
 			}
@@ -114,16 +116,40 @@ public class Graph {
 				}
 				else {
 					destination.addMarker(Node.Marker.UNEXPLORED);
+                  
+                  	// only add nodes that are guaranteed to be safe
 					if (dangers.isEmpty()) {
 						unexplored.add(adjacentPoint);
 					}
 				}
-				for (Node.Marker marker : dangers) {
-					destination.addMarker(marker);
+				for (Node.Marker marker : dangers) { // if wumpus is alive after shooting arrow, do not add to current facing direction
+                  destination.addMarker(marker);
 				}
 				nodes.put(adjacentPoint, destination);
 			}
 		}
+	}
+	
+	public Point getAdjacentPoint(Point from, MyAI.Direction direction) {
+		int x = from.getX();
+		int y = from.getY();
+		switch (direction) {
+			case UP:
+				++y;
+				break;
+			case DOWN:
+				--y;
+				break;
+			case RIGHT:
+				++x;
+				break;
+			case LEFT:
+				--x;
+				break;
+			default:
+				throw new WumpusWorldException("unexpected direction");
+		}
+		return new Point(x, y);
 	}
 	
 	/*
@@ -131,7 +157,7 @@ public class Graph {
 	 * For example, if direction = RIGHT, returns from.right
 	 * (the node leading to the from's right neighbor).
 	 */
-	private Node getAdjacentNode(Node from, MyAI.Direction direction) {
+	public Node getAdjacentNode(Node from, MyAI.Direction direction) {
 		Node adjacent;
 		switch (direction) {
 			case UP:
@@ -193,6 +219,7 @@ public class Graph {
 	public Set<Point> getKnownAdjacentPoints(Point point) {
 		Set<Point> neighbors = new HashSet<>();
 		for (Point adjacentPoint : getAdjacentDirectionalPoints(point).values()) {
+			Node adjacentNode = nodes.get(adjacentPoint);
 			if (nodes.containsKey(adjacentPoint)) {
 				neighbors.add(adjacentPoint);
 			}
@@ -225,7 +252,7 @@ public class Graph {
 	public static int getManhattanDistance(Point point1, Point point2) {
 		return Math.abs(point1.getX() - point2.getX()) + Math.abs(point1.getY() - point2.getY());
 	}
-	
+
     /* Returns true if "origin" is facing the same direction as "target"
      */
     public static boolean isPointFacing(Point origin, Point target, MyAI.Direction direction) {
@@ -281,7 +308,7 @@ public class Graph {
 	 */
 	public Stack<Point> getPath(Point origin, Point destination) {
 		Stack<Point> result = new Stack<>();
-		Map<Point, Point> parents = new HashMap<>();
+		Map<Point, Point> parents = new HashMap<>();		// map {child: parent}
 		Comparator<Object> pointComparator = new PointComparator(destination);
 		Queue<Point> frontier = new PriorityQueue<Point>(pointComparator);
 	  
@@ -301,7 +328,8 @@ public class Graph {
 		  
 			// TODO: avoid hazards
 			// expand all children of current node
-			for (Point child : getKnownAdjacentPoints(current)) {
+			Set<Point> known = getKnownAdjacentPoints(current);
+			for (Point child : known) {
 				// graph search; ignore already-stepped-on points
 				if (!parents.containsKey(child)) {
 					if (!nodes.get(child).isDangerous()) {
@@ -330,23 +358,43 @@ public class Graph {
 			}
 		}
 	}
-  
-	/* 
-	 * Comparator to order by increasing Manhattan distance (i.e., least to greatest).
+
+	/* Iterates through the graph and removes all WUMPUSWARNING markers.
+	 * Used when the wumpus is killed.
 	 */
-	private class PointComparator implements Comparator<Object> {
-		private Point destination;
-	  
-		public PointComparator(Point destination) {
-			this.destination = destination;
-		}
-		
-		@Override
-		public int compare(Object a1, Object b1) {
-			Point a = (Point)a1;
-			Point b = (Point)b1;
-			return getManhattanDistance(a, destination) - getManhattanDistance(b, destination);
+	public void removeWumpusWarning() {
+		for (Map.Entry<Point, Node> entry : nodes.entrySet()) {
+			Point point = entry.getKey();
+			Node node = entry.getValue();
+			if (node.containsMarker(Node.Marker.WUMPUSWARNING) && !node.containsMarker(Node.Marker.WUMPUS)) {
+				node.removeMarker(Node.Marker.WUMPUSWARNING);
+				if (!node.containsMarker(Node.Marker.PITWARNING))
+					unexplored.add(point);
+			}
 		}
 	}
+	
+	public void addToUnexplored(Point point) {
+		unexplored.add(point);
+	}
+      
+  	/* 
+  	 * Comparator to order by increasing Manhattan distance (i.e., least to greatest).
+  	 */
+  	private class PointComparator implements Comparator<Object> {
+  		private Point destination;
+  	  
+  		public PointComparator(Point destination) {
+  			this.destination = destination;
+  		}
+  		
+  		@Override
+  		public int compare(Object a1, Object b1) {
+  			Point a = (Point)a1;
+  			Point b = (Point)b1;
+  			
+  			return getManhattanDistance(a, destination) - getManhattanDistance(b, destination);
+  		}
+  	}
   	
 }

@@ -47,6 +47,7 @@ public class MyAI extends Agent
 	private boolean hasArrow;
 	private boolean wumpusAlive;
 	private boolean climbOut;
+  	private boolean justShot;
 	
 	public MyAI ( )
 	{
@@ -61,6 +62,7 @@ public class MyAI extends Agent
 		hasArrow = true;
 		wumpusAlive = true;
 		climbOut = false;
+      	justShot = false;
 		
 		actions = new LinkedList<>();
 		direction = Direction.RIGHT;
@@ -83,6 +85,7 @@ public class MyAI extends Agent
 		// ======================================================================
 		if (scream) {
 			wumpusAlive = false;
+        	// remove S/W markers from the graph
 		}
 		
 		if (glitter) {
@@ -107,11 +110,13 @@ public class MyAI extends Agent
 			markOutOfBounds();
 			cave.getNode(currentPoint).addMarker(Node.Marker.WALL);
 			currentPoint = getLocalOriginPoint(currentPoint);
-			
-			// TODO: turn to a valid position
 		}
       
 		Set<Node.Marker> dangers = new HashSet<>();
+		
+		if (cave.getNode(currentPoint) != null) {
+			cave.getNode(currentPoint).addMarker(Node.Marker.EXPLORED);
+		}
 
 		// if an upcoming action has been queued, prioritize it
 		if (!actions.isEmpty()) {
@@ -120,43 +125,64 @@ public class MyAI extends Agent
 		
 		// attempt to kill the Wumpus
 		if (stench && wumpusAlive && hasArrow) {
-//            hasArrow = false;
-//            return Action.SHOOT;
+           hasArrow = false;
+           justShot = true;
+           return Action.SHOOT;
 		}
 		
 		Action action;
-//		currentNode.addMarker(Node.Marker.EXPLORED);
 		if (breeze || stench) {
-			// TODO: error if a breeze/stench is perceived at the starting point
 			if (currentPoint.atStart()) {
 				// climb out?
 				climbOut = true;
 				return getAction(stench, breeze, glitter, bump, scream);
 			}
 			
-			// TODO: what if a breeze and stench exist on the same point?
-			// after the wumpus dies, the node would no longer be marked WUMPUSWARNING
-			// but might still need to be marked PITWARNING
 			if (breeze) {
 				dangers.add(Node.Marker.PITWARNING);
 			}
-			if (stench) {
-				dangers.add(Node.Marker.WUMPUSWARNING);
+			if (stench && wumpusAlive) {
+                dangers.add(Node.Marker.WUMPUSWARNING);
 			}
-			action = addAndGoToClosestPoint(dangers);
+//			action = addAndGoToClosestPoint(dangers);
 //			currentNode = cave.addNode(currentNode, direction, currentPoint, dangers);
 //			Point closestPoint = cave.getClosestUnexploredPoint(currentPoint);
 //			navigate(currentPoint, closestPoint);
 //			action = dequeueAction(dangers);
 		}
 		else {
-			action = addAndGoToClosestPoint(dangers);
+//			action = addAndGoToClosestPoint(dangers);
 //			currentNode = cave.addNode(currentNode, direction, currentPoint, dangers);
 //			Point closestPoint = cave.getClosestUnexploredPoint(currentPoint);
 //			navigate(currentPoint, closestPoint);
 //			action = dequeueAction(dangers);
 		}
 		
+		currentNode = cave.addNode(currentNode, direction, currentPoint, dangers);
+		
+		if (justShot) {
+			// shot, but missed
+			// remove WUMPUSWARNING from the node directly in front of the agent
+			Node neighbor = cave.getAdjacentNode(currentNode, direction);
+			if (neighbor != null) {
+				neighbor.removeMarker(Node.Marker.WUMPUSWARNING);
+				Point adjacentPoint = cave.getAdjacentPoint(currentPoint, direction);
+				if (!neighbor.containsMarker(Node.Marker.PITWARNING)) {
+					cave.addToUnexplored(adjacentPoint);	
+				}
+			}
+		}
+		
+		Point closestPoint = cave.getClosestUnexploredPoint(currentPoint, direction);
+		if (closestPoint == null) {
+			climbOut = true;
+			actions.clear();
+			return getAction(false, false, false, false, false);
+		}
+		navigate(currentPoint, closestPoint);
+		action = dequeueAction(dangers);
+      
+		justShot = false;
 		return action;
 		// ======================================================================
 		// YOUR CODE ENDS
@@ -209,7 +235,7 @@ public class MyAI extends Agent
 		return Action.TURN_RIGHT;
 	}
 	
-	private Action moveForward(Set<Node.Marker> dangers) {
+	private Action moveForward() {
 		switch (direction) {
 			case UP:
 				currentPoint.addY(1);
@@ -240,7 +266,7 @@ public class MyAI extends Agent
 				nextAction = turnRight();
 				break;
 			case FORWARD:
-				nextAction = moveForward(dangers);
+				nextAction = moveForward();
 			default:
 				break;
 		}
@@ -360,7 +386,7 @@ public class MyAI extends Agent
 		}
 		for (Point adjacentPoint : cave.getKnownAdjacentPoints(point)) {
 			Node adjacentNode = cave.getNode(adjacentPoint);
-			if (adjacentNode.containsMarker(Node.Marker.EXPLORED)) {
+			if (!adjacentPoint.outOfBounds() && adjacentNode.containsMarker(Node.Marker.EXPLORED)) {
 				return adjacentPoint;
 			}
 		}
@@ -428,3 +454,4 @@ public class MyAI extends Agent
 	// YOUR CODE ENDS
 	// ======================================================================
 }
+
