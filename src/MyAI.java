@@ -234,15 +234,15 @@ public class MyAI extends Agent
 		Action nextAction = actions.remove();
 		switch (nextAction) {
 			case TURN_LEFT:
-			nextAction = turnLeft();
-			break;
-		case TURN_RIGHT:
-			nextAction = turnRight();
-			break;
-		case FORWARD:
-			nextAction = moveForward(dangers);
-		default:
-			break;
+				nextAction = turnLeft();
+				break;
+			case TURN_RIGHT:
+				nextAction = turnRight();
+				break;
+			case FORWARD:
+				nextAction = moveForward(dangers);
+			default:
+				break;
 		}
 		return nextAction;
 	}
@@ -255,7 +255,7 @@ public class MyAI extends Agent
 			return;
 		}
 		switch (currentDirection) {
-				case UP:
+			case UP:
 				switch (targetDirection) {
 					case DOWN:
 						actions.add(Action.TURN_RIGHT);
@@ -414,7 +414,7 @@ public class MyAI extends Agent
 	 */
 	private Action addAndGoToClosestPoint(Set<Node.Marker> dangers) {
 		currentNode = cave.addNode(currentNode, direction, currentPoint, dangers);
-		Point closestPoint = cave.getClosestUnexploredPoint(currentPoint);
+		Point closestPoint = cave.getClosestUnexploredPoint(currentPoint, direction);
 		if (closestPoint == null) {
 			climbOut = true;
 			actions.clear();
