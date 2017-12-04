@@ -226,21 +226,53 @@ public class Graph {
 		return Math.abs(point1.getX() - point2.getX()) + Math.abs(point1.getY() - point2.getY());
 	}
 	
-	/*
-     * Finds closest unexplored node from currentValue
+    /* Returns true if "origin" is facing the same direction as "target"
      */
-	public Point getClosestUnexploredPoint(Point currentPoint) {
-		Point minPoint = null;
-		int minManhattanDistance = Integer.MAX_VALUE; //getManhattanDistance(currentPoint, minPoint);
+    public static boolean isPointFacing(Point origin, Point target, MyAI.Direction direction) {
+        switch (direction) {
+            case UP:
+                if (origin.getX() == target.getX() && (target.getY() - origin.getY() > 0)) {
+                    return true;
+                }
+                break;
+          	case DOWN:
+                if (origin.getX() == target.getX() && (target.getY() - origin.getY() < 0)) {
+                    return true;
+                }
+                break;
+          	case RIGHT:
+                if (origin.getY() == target.getY() && target.getX() - origin.getX() > 0)
+                    return true;
+                break;
+          	case LEFT:
+          		if (origin.getY() == target.getY() && target.getX() - origin.getX() < 0)
+                    return true;
+          		break;
+        }
+		return false;
+    }
+	
+	/*
+     * Finds and returns the closest unexplored Point from origin.
+     */
+	public Point getClosestUnexploredPoint(Point origin, MyAI.Direction directionPreference) {
+		Point optimal = null;
+		int shortestDistance = Integer.MAX_VALUE;
 		for (Point point : unexplored) {
-			int tempManhattanDistance = getManhattanDistance(currentPoint, point);
-			if (tempManhattanDistance < minManhattanDistance) {
-				minPoint = point;
-				minManhattanDistance = tempManhattanDistance;
+			int distanceFromPoint = getManhattanDistance(origin, point);
+			if (distanceFromPoint < shortestDistance) {
+                // if "point" is in the same Direction relative to "optimal":
+                //     optimal = point
+				optimal = point;
+				shortestDistance = distanceFromPoint;
 			}
+          	else if (distanceFromPoint == shortestDistance && isPointFacing(origin, point, directionPreference)) {
+                optimal = point;
+                shortestDistance = distanceFromPoint;
+            }
 		}
-		unexplored.remove(minPoint);
-		return minPoint;
+		unexplored.remove(optimal);
+		return optimal;
 	}
   
 	/* 
