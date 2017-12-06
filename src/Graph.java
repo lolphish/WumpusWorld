@@ -12,10 +12,14 @@ import java.util.Stack;
 public class Graph {
 	private Map<Point,Node> nodes; // Map to store points
   	private Set<Point> unexplored;
+  	boolean wumpusFound;
+  	Point wumpusPoint;
 	
 	public Graph() {
 		nodes = new HashMap<>();
       	unexplored = new HashSet<>();
+      	wumpusFound = false;
+      	wumpusPoint = null;
 	}
 	
 	public Graph(Node startingNode) {
@@ -28,6 +32,14 @@ public class Graph {
 	
 	public int size() {
 		return nodes.size();
+	}
+	
+	public boolean isWumpusFound() {
+		return wumpusFound;
+	}
+	
+	public Point getWumpusPoint() {
+		return wumpusPoint;
 	}
 	
 	/*
@@ -100,30 +112,45 @@ public class Graph {
 		for (Map.Entry<MyAI.Direction, Point> entry : getAdjacentDirectionalPoints(point).entrySet()) {
 			MyAI.Direction direction = entry.getKey();
 			Point adjacentPoint = entry.getValue();
+			
+			if (wumpusFound) {
+				dangers.remove(Node.Marker.WUMPUSWARNING);
+			}
 
 			// If the existing node has the same warning before, then it confirms the danger
 			if (nodes.containsKey(adjacentPoint)) {
-            		Node adjacentNode = nodes.get(adjacentPoint);
-              
-              	if (dangers.contains(Node.Marker.PITWARNING) && adjacentNode.containsMarker(Node.Marker.PITWARNING)) {
-                    adjacentNode.addMarker(Node.Marker.PIT);
-                }
-                else if (!dangers.contains(Node.Marker.PITWARNING) && adjacentNode.containsMarker(Node.Marker.PITWARNING)) { // if current point does not have a pitwarning, all potential pitwarnings should be removed
-                	adjacentNode.removeMarker(Node.Marker.PITWARNING);
-                  	if (!adjacentNode.isDangerous())
-                    	unexplored.add(adjacentPoint);
-                }
-                if (dangers.contains(Node.Marker.WUMPUSWARNING) && adjacentNode.containsMarker(Node.Marker.WUMPUSWARNING)) {
-                    adjacentNode.addMarker(Node.Marker.WUMPUS);
-                    removeWumpusWarning();
-                    // function to delete all WUMPUS WARNINGS AT PLACES NOT WUMPUS
-                }
-              	else if(!dangers.contains(Node.Marker.WUMPUSWARNING) && adjacentNode.containsMarker(Node.Marker.WUMPUSWARNING)){ // if current point does not have a wumpuswarning, remove all wumpuswarnings around
-                    adjacentNode.removeMarker(Node.Marker.WUMPUSWARNING);
-                  	if (!adjacentNode.isDangerous())
-                    	unexplored.add(adjacentPoint);
-              	}
-              	// if current node does not have any
+				if (!adjacentPoint.outOfBounds()) {
+					Node adjacentNode = nodes.get(adjacentPoint);
+					
+					// a pit has been isolated
+	              	if (dangers.contains(Node.Marker.PITWARNING) && adjacentNode.containsMarker(Node.Marker.PITWARNING)) {
+	                    adjacentNode.addMarker(Node.Marker.PIT);
+	                }
+	                else if (!dangers.contains(Node.Marker.PITWARNING) && adjacentNode.containsMarker(Node.Marker.PITWARNING)) { // if current point does not have a pitwarning, all potential pitwarnings should be removed
+	                	adjacentNode.removeMarker(Node.Marker.PITWARNING);
+	                  	if (!adjacentNode.isDangerous()) {
+	                  		unexplored.add(adjacentPoint);	
+	                  	}
+	                }
+	              	
+	              	// wumpus has been isolated
+	                if (dangers.contains(Node.Marker.WUMPUSWARNING) && adjacentNode.containsMarker(Node.Marker.WUMPUSWARNING)) {
+	                    adjacentNode.addMarker(Node.Marker.WUMPUS);
+	                    removeWumpusWarning();
+	                    wumpusFound = true;
+	                    wumpusPoint = new Point(adjacentPoint);
+	                    dangers.remove(Node.Marker.WUMPUSWARNING);
+	                    // function to delete all WUMPUS WARNINGS AT PLACES NOT WUMPUS
+	                }
+	              	else if(!dangers.contains(Node.Marker.WUMPUSWARNING) && adjacentNode.containsMarker(Node.Marker.WUMPUSWARNING)){ // if current point does not have a wumpuswarning, remove all wumpuswarnings around
+	                    adjacentNode.removeMarker(Node.Marker.WUMPUSWARNING);
+	                  	if (!adjacentNode.isDangerous()) {
+	                  		unexplored.add(adjacentPoint);	
+	                  	}
+	              	}
+	              	// if current node does not have any
+				}
+				
 			}
 			else {
 				Node destination = branchDestinationNode(from, direction);
@@ -139,7 +166,10 @@ public class Graph {
 					}
 				}
 				for (Node.Marker marker : dangers) { // if wumpus is alive after shooting arrow, do not add to current facing direction
-                  destination.addMarker(marker);
+					if (wumpusFound && marker == Node.Marker.WUMPUSWARNING) {
+						continue;
+					}
+					destination.addMarker(marker);
 				}
 				nodes.put(adjacentPoint, destination);
 			}
@@ -235,7 +265,6 @@ public class Graph {
 	public Set<Point> getKnownAdjacentPoints(Point point) {
 		Set<Point> neighbors = new HashSet<>();
 		for (Point adjacentPoint : getAdjacentDirectionalPoints(point).values()) {
-			Node adjacentNode = nodes.get(adjacentPoint);
 			if (nodes.containsKey(adjacentPoint)) {
 				neighbors.add(adjacentPoint);
 			}
@@ -265,6 +294,70 @@ public class Graph {
 		return nodes.get(point);
 	}
 	
+  	/*
+     * Calculates the amount of extra cost due to turns for a current point
+     * to another. Adds that to heuristic
+     */
+	public static int getTurnHeuristic(Point point1, Point point2, MyAI.Direction direction) {
+		int dX = point1.getX() - point2.getX();
+		int dY = point1.getY() - point2.getY();
+		int cost = 0; // cost of the turning
+    
+		if (dX > 0) {
+			switch (direction) {
+				case RIGHT:
+			  		cost += 2;
+			  		break;
+		        case UP:
+		        case DOWN:
+		        		++cost;
+		        		break;
+		        	default:
+		        		break;
+			}
+		}
+		else if (dX < 0) {
+			switch(direction) {
+				case LEFT:
+					cost += 2;
+					break;
+				case UP:
+				case DOWN:
+					++cost;
+					break;
+				default:
+					break;
+			}
+		}
+		else if (dY > 0) {
+			switch(direction) {
+				case UP:
+					cost += 2;
+					break;
+				case LEFT:
+				case RIGHT:
+					++cost;
+					break;
+				default:
+					break;
+			}
+		}
+		else if(dY < 0) {
+			switch(direction) {
+	  			case DOWN:
+	  				cost += 2;
+	  				break;
+	  			case LEFT:
+	  			case RIGHT:
+	  				++cost;
+	  				break;
+	  			default:
+	  				break;
+			}
+		}
+		return cost;
+	}
+  
 	public static int getManhattanDistance(Point point1, Point point2) {
 		return Math.abs(point1.getX() - point2.getX()) + Math.abs(point1.getY() - point2.getY());
 	}
@@ -322,10 +415,10 @@ public class Graph {
 	 * Performs a greedy best-first search from origin to destination.
 	 * Returns a Stack of Points of the discovered path.
 	 */
-	public Stack<Point> getPath(Point origin, Point destination) {
+	public Stack<Point> getPath(Point origin, Point destination, MyAI.Direction currentDirection) {
 		Stack<Point> result = new Stack<>();
 		Map<Point, Point> parents = new HashMap<>();		// map {child: parent}
-		Comparator<Object> pointComparator = new PointComparator(destination);
+		Comparator<Object> pointComparator = new PointComparator(destination, currentDirection);
 		Queue<Point> frontier = new PriorityQueue<Point>(pointComparator);
 	  
 		frontier.add(origin);
@@ -385,9 +478,9 @@ public class Graph {
 			if (node.containsMarker(Node.Marker.WUMPUSWARNING) && !node.containsMarker(Node.Marker.WUMPUS)) {
 				node.removeMarker(Node.Marker.WUMPUSWARNING);
 				
-				// TODO: if (!node.isDangerous()) ?
-				if (!node.containsMarker(Node.Marker.PITWARNING))
+				if (!node.isDangerous()) {
 					unexplored.add(point);
+				}
 			}
 		}
 	}
@@ -395,24 +488,37 @@ public class Graph {
 	public void addToUnexplored(Point point) {
 		unexplored.add(point);
 	}
+	
+	public boolean containsPoint(Point point) {
+		return nodes.containsKey(point);
+	}
       
   	/* 
   	 * Comparator to order by increasing Manhattan distance (i.e., least to greatest).
   	 */
   	private class PointComparator implements Comparator<Object> {
   		private Point destination;
+      	private MyAI.Direction direction;
   	  
-  		public PointComparator(Point destination) {
+  		public PointComparator(Point destination, MyAI.Direction direction) {
   			this.destination = destination;
+          	this.direction = direction;
   		}
   		
   		@Override
   		public int compare(Object a1, Object b1) {
   			Point a = (Point)a1;
   			Point b = (Point)b1;
+          
+          	int costA = getTurnHeuristic(a, destination, direction);
+          	int costB = getTurnHeuristic(b, destination, direction);
+          	int estimateA = getManhattanDistance(a, destination);
+          	int estimateB = getManhattanDistance(b, destination);
   			
-  			return getManhattanDistance(a, destination) - getManhattanDistance(b, destination);
+//          	return estimateA - estimateB;
+          	return (costA + estimateA) - (costB + estimateB);
   		}
   	}
   	
 }
+
