@@ -72,9 +72,7 @@ public class Graph {
 			}
 		}
 		
-//		destination.addMarker(Node.Marker.EXPLORED);
 		expandUnexploredNeighbors(destination, currentPoint, dangers);
-//		setNeighbors(copyPoint, destination);
 	}
 	
 	/* Branches a new Node off of origin in direction 'direction'.
@@ -106,7 +104,25 @@ public class Graph {
 		return destination;
 	}
 	
-	/* Expands the immediate unknown neighbors of the argument node/point, marking them as UNEXPLORED.
+	/**
+	 * Expands the immediate neighbors of the argument "point".
+	 * 
+	 * For each immediate neighbor n of "point" p:
+	 *   if n has already been explored:
+	 *     check for hazards (PITWARNING, WUMPUSWARNING)
+	 *     if p is safe, and n is marked as potentially dangerous:
+	 *       then n is safe
+	 *     otherwise:
+	 *       n is guaranteed to be a PIT or WUMPUS
+	 *   
+	 *   else, if n is unknown:
+	 *     add it to the graph
+	 *     if p perceives a hazard, mark n as potentially hazardous
+	 *     otherwise, if p is safe, add n to the set of unexplored, safe nodes
+	 * 
+	 * @param from
+	 * @param point
+	 * @param dangers
 	 */
 	private void expandUnexploredNeighbors(Node from, Point point, Set<Node.Marker> dangers) {
 		for (Map.Entry<MyAI.Direction, Point> entry : getAdjacentDirectionalPoints(point).entrySet()) {
@@ -123,37 +139,41 @@ public class Graph {
 					Node adjacentNode = nodes.get(adjacentPoint);
 					
 					// a pit has been isolated
-	              	if (dangers.contains(Node.Marker.PITWARNING) && adjacentNode.containsMarker(Node.Marker.PITWARNING)) {
-	                    adjacentNode.addMarker(Node.Marker.PIT);
-	                }
-	                else if (!dangers.contains(Node.Marker.PITWARNING) && adjacentNode.containsMarker(Node.Marker.PITWARNING)) { // if current point does not have a pitwarning, all potential pitwarnings should be removed
-	                	adjacentNode.removeMarker(Node.Marker.PITWARNING);
-	                  	if (!adjacentNode.isDangerous()) {
-	                  		unexplored.add(adjacentPoint);	
-	                  	}
-	                }
+					if (adjacentNode.containsMarker(Node.Marker.PITWARNING)) {
+						if (dangers.contains(Node.Marker.PITWARNING)) {
+							adjacentNode.addMarker(Node.Marker.PIT);
+						}
+						else {
+							adjacentNode.removeMarker(Node.Marker.PITWARNING);
+		                  	if (!adjacentNode.isDangerous()) {
+		                  		unexplored.add(adjacentPoint);	
+		                  	}
+						}
+					}
 	              	
 	              	// wumpus has been isolated
-	                if (dangers.contains(Node.Marker.WUMPUSWARNING) && adjacentNode.containsMarker(Node.Marker.WUMPUSWARNING)) {
-	                    adjacentNode.addMarker(Node.Marker.WUMPUS);
-	                    removeWumpusWarning();
-	                    wumpusFound = true;
-	                    wumpusPoint = new Point(adjacentPoint);
-	                    dangers.remove(Node.Marker.WUMPUSWARNING);
-	                    // function to delete all WUMPUS WARNINGS AT PLACES NOT WUMPUS
-	                }
-	              	else if(!dangers.contains(Node.Marker.WUMPUSWARNING) && adjacentNode.containsMarker(Node.Marker.WUMPUSWARNING)){ // if current point does not have a wumpuswarning, remove all wumpuswarnings around
-	                    adjacentNode.removeMarker(Node.Marker.WUMPUSWARNING);
-	                  	if (!adjacentNode.isDangerous()) {
-	                  		unexplored.add(adjacentPoint);	
-	                  	}
-	              	}
-	              	// if current node does not have any
+					if (adjacentNode.containsMarker(Node.Marker.WUMPUSWARNING)) {
+						if (dangers.contains(Node.Marker.WUMPUSWARNING)) {
+							adjacentNode.addMarker(Node.Marker.WUMPUS);
+		                    removeWumpusWarning();
+		                    wumpusFound = true;
+		                    wumpusPoint = new Point(adjacentPoint);
+		                    dangers.remove(Node.Marker.WUMPUSWARNING);
+		                    // function to delete all WUMPUS WARNINGS AT PLACES NOT WUMPUS
+						}
+						else {
+							adjacentNode.removeMarker(Node.Marker.WUMPUSWARNING);
+		                  	if (!adjacentNode.isDangerous()) {
+		                  		unexplored.add(adjacentPoint);	
+		                  	}
+						}
+					}
 				}
 				
 			}
 			else {
 				Node destination = branchDestinationNode(from, direction);
+				
 				if (adjacentPoint.outOfBounds()) {
 					destination.addMarker(Node.Marker.WALL);
 				}
@@ -164,13 +184,15 @@ public class Graph {
 					if (dangers.isEmpty()) {
 						unexplored.add(adjacentPoint);
 					}
-				}
-				for (Node.Marker marker : dangers) { // if wumpus is alive after shooting arrow, do not add to current facing direction
-					if (wumpusFound && marker == Node.Marker.WUMPUSWARNING) {
-						continue;
+					
+					for (Node.Marker marker : dangers) { // if wumpus is alive after shooting arrow, do not add to current facing direction
+						if (wumpusFound && marker == Node.Marker.WUMPUSWARNING) {
+							continue;
+						}
+						destination.addMarker(marker);
 					}
-					destination.addMarker(marker);
 				}
+				
 				nodes.put(adjacentPoint, destination);
 			}
 		}
@@ -222,22 +244,6 @@ public class Graph {
 				throw new WumpusWorldException("unexpected direction");
 		}
 		return adjacent;
-	}
-	
-	/*
-	 * Finds if there are possible neighbors in the map and update
-	 * current node point
-	 */
-	private void setNeighbors(Point currentPoint, Node destination)
-	{
-		Point left = new Point(currentPoint.getX()-1, currentPoint.getY());
-		Point right = new Point(currentPoint.getX()+1, currentPoint.getY());
-		Point up = new Point(currentPoint.getX(), currentPoint.getY()+1);
-		Point down = new Point(currentPoint.getX(), currentPoint.getY()-1);
-		destination.setLeft(nodes.get(left));
-		destination.setRight(nodes.get(right));
-		destination.setAbove(nodes.get(up));
-		destination.setBelow(nodes.get(down));
 	}
 	
 	/* Returns a map of ALL POSSIBLE immediate neighbors of 'point' - 
@@ -515,7 +521,6 @@ public class Graph {
           	int estimateA = getManhattanDistance(a, destination);
           	int estimateB = getManhattanDistance(b, destination);
   			
-//          	return estimateA - estimateB;
           	return (costA + estimateA) - (costB + estimateB);
   		}
   	}
