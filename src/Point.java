@@ -102,4 +102,9 @@ public class Point {
 	public static int getMinY() {
 		return minY;
 	}
+	
+	public static void defaultMax() {
+		setMaxX(7);
+		setMaxY(7);
+	}
 }

@@ -54,6 +54,7 @@ public class MyAI extends Agent
 		// ======================================================================
 		// YOUR CODE BEGINS
 		// ======================================================================
+		Point.defaultMax();
 		currentPoint = Point.getStartingPoint();		// initialized to (1, 1)
 		lastPoint = null;
 		cave = new Graph();
