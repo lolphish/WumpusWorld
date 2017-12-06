@@ -84,7 +84,7 @@ public class MyAI extends Agent
 		// ======================================================================
 		if (scream) {
 			wumpusAlive = false;
-        	// remove S/W markers from the graph
+			cave.removeWumpusWarning();
 		}
 		
 		if (glitter) {
@@ -119,14 +119,18 @@ public class MyAI extends Agent
 
 		// if an upcoming action has been queued, prioritize it
 		if (!actions.isEmpty()) {
-			return dequeueAction(dangers);
+			return dequeueAction();
 		}
 		
-		// attempt to kill the Wumpus
 		if (stench && wumpusAlive && hasArrow) {
+//			Point adjacentPoint = cave.getAdjacentPoint(currentPoint, direction);
+//			Node adjacentNode = cave.getNode(adjacentPoint);
+//			if (cave.containsPoint(adjacentPoint) && adjacentNode.containsMarker(Node.Marker.WALL)) {
+//				// turn to unexplored adjacent node
+//			}
 			hasArrow = false;
 			justShot = true;
-			return Action.SHOOT;
+			return Action.SHOOT;	
 		}
 		
 		Action action;
@@ -158,6 +162,11 @@ public class MyAI extends Agent
 		
 		cave.addNode(currentPoint, direction, dangers);
 		
+//		// attempt to kill the Wumpus
+//		if (stench && wumpusAlive && hasArrow && cave.isWumpusFound()) {
+//			return killWumpus();
+//		}
+		
 		if (justShot) {
 			// shot, but missed
 			// remove WUMPUSWARNING from the node directly in front of the agent
@@ -179,7 +188,7 @@ public class MyAI extends Agent
 			return getAction(false, false, false, false, false);
 		}
 		navigate(currentPoint, closestPoint);
-		action = dequeueAction(dangers);
+		action = dequeueAction();
       
 		justShot = false;
 		return action;
@@ -256,7 +265,7 @@ public class MyAI extends Agent
 	/* Assumes actions is NOT empty.
 	 * Pops the next Action from the actions queue, and returns it.
 	 */
-	private Action dequeueAction(Set<Node.Marker> dangers) throws NoSuchElementException {
+	private Action dequeueAction() throws NoSuchElementException {
 		Action nextAction = actions.remove();
 		switch (nextAction) {
 			case TURN_LEFT:
@@ -395,7 +404,7 @@ public class MyAI extends Agent
      * Adds all necessary actions to the actions queue.
 	 */
 	private void navigate(Point origin, Point destination) {
-		Stack<Point> path = cave.getPath(origin, destination);
+		Stack<Point> path = cave.getPath(origin, destination, direction);
 		getActionsFromPoints(path);
 	}
 
@@ -431,8 +440,41 @@ public class MyAI extends Agent
 			return getAction(false, false, false, false, false);
 		}
 		navigate(currentPoint, closestPoint);
-		return dequeueAction(dangers);
+		return dequeueAction();
 	}
+	
+//	private Action killWumpus() {
+//		if (cave.getWumpusPoint() == null) {
+//			return Action.SHOOT;
+//		}
+//		
+//		int dX = currentPoint.getX() - cave.getWumpusPoint().getX();
+//		int dY = currentPoint.getY() - cave.getWumpusPoint().getY();
+//		
+//		if (dX < 0) {
+//			faceDirection(direction, Direction.RIGHT);
+//		}
+//		else if (dX > 0) {
+//			faceDirection(direction, Direction.LEFT);
+//		}
+//		else if (dY < 0) {
+//			faceDirection(direction, Direction.UP);
+//		}
+//		else if (dY > 0) {
+//			faceDirection(direction, Direction.DOWN);
+//		}
+//		actions.add(Action.SHOOT);
+//		return dequeueAction();
+//	}
+	
+//	private boolean facingWumpus() {		
+//		int dX = currentPoint.getX() - cave.getWumpusPoint().getX();
+//		int dY = currentPoint.getY() - cave.getWumpusPoint().getY();
+//		
+//		return cave.getWumpusPoint() != null && 
+//				dX < 0 && direction == Direction.RIGHT || dX > 0 && direction == Direction.LEFT || 
+//				dY < 0 && direction == Direction.UP || dY > 0 && direction == Direction.RIGHT;
+//	}
 
 	// ======================================================================
 	// YOUR CODE ENDS
