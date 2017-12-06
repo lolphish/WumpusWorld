@@ -38,18 +38,20 @@ public class Graph {
 	 *   
 	 * @param destinationPoint - has already been updated to the coordinates of destination
 	 */
-	public Node addNode(Node node, MyAI.Direction direction, Point currentPoint, Set<Node.Marker> dangers) {
+	public void addNode(Point currentPoint, MyAI.Direction direction, Set<Node.Marker> dangers) {
+		Node currentNode = nodes.get(currentPoint);
 		Node destination;
+		
 		// for starting node
-		if (node == null) {
+		if (currentNode == null) {
 			destination = new Node(Node.Marker.EXPLORED);
 			Point copyPoint = new Point(currentPoint);
 			nodes.put(copyPoint, destination);
 		}
 		else {
-			destination = getAdjacentNode(node, direction);
+			destination = getAdjacentNode(currentNode, direction);
 			if (destination == null) {
-				destination = branchDestinationNode(node, direction);
+				destination = branchDestinationNode(currentNode, direction);
 				
 				// insert a copy of currentPoint into the map;
 				// otherwise its x/y values will update inside the map
@@ -61,7 +63,6 @@ public class Graph {
 //		destination.addMarker(Node.Marker.EXPLORED);
 		expandUnexploredNeighbors(destination, currentPoint, dangers);
 //		setNeighbors(copyPoint, destination);
-		return destination;
 	}
 	
 	/* Branches a new Node off of origin in direction 'direction'.

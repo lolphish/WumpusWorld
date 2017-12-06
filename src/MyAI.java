@@ -42,7 +42,6 @@ public class MyAI extends Agent
 	private Direction direction;
 	private Point currentPoint;
 	private Point lastPoint;
-	private Node currentNode;
 	private Graph cave;
 	private Queue<Action> actions;
 	private boolean hasArrow;
@@ -57,8 +56,6 @@ public class MyAI extends Agent
 		// ======================================================================
 		currentPoint = Point.getStartingPoint();		// initialized to (1, 1)
 		lastPoint = null;
-//		currentNode = new Node(Node.Marker.EXPLORED);
-		currentNode = null;
 		cave = new Graph();
 		
 		hasArrow = true;
@@ -109,7 +106,7 @@ public class MyAI extends Agent
 			// if a bump is perceived, a new node was added when it shouldn't have been
 			// we can mark this node as a WALL, then update currentPoint to be the node that it came from
 			// TODO: add right/top wall
-			markOutOfBounds();
+			markOutOfBounds(currentPoint.getX(), currentPoint.getY());
 			cave.getNode(currentPoint).addMarker(Node.Marker.WALL);
 			currentPoint = new Point(lastPoint);
 		}
@@ -127,9 +124,9 @@ public class MyAI extends Agent
 		
 		// attempt to kill the Wumpus
 		if (stench && wumpusAlive && hasArrow) {
-           hasArrow = false;
-           justShot = true;
-           return Action.SHOOT;
+			hasArrow = false;
+			justShot = true;
+			return Action.SHOOT;
 		}
 		
 		Action action;
@@ -159,12 +156,12 @@ public class MyAI extends Agent
 //			action = dequeueAction(dangers);
 		}
 		
-		// update currentNode to be the node you are about to step on
-		currentNode = cave.addNode(currentNode, direction, currentPoint, dangers);
+		cave.addNode(currentPoint, direction, dangers);
 		
 		if (justShot) {
 			// shot, but missed
 			// remove WUMPUSWARNING from the node directly in front of the agent
+			Node currentNode = cave.getNode(currentPoint);
 			Node neighbor = cave.getAdjacentNode(currentNode, direction);
 			if (neighbor != null) {
 				neighbor.removeMarker(Node.Marker.WUMPUSWARNING);
@@ -402,13 +399,18 @@ public class MyAI extends Agent
 		getActionsFromPoints(path);
 	}
 
-	private void markOutOfBounds() {
+	/* Sets Point.maxX and Point.maxY to their respective arguments.
+	 * Note that Point.maxX and Point.maxY are inclusive bounds.
+	 * But, this method mandates that you pass currentPoint.getX(), .getY() directly.
+	 * Deletes out-of-bounds nodes in the cave.
+	 */
+	private void markOutOfBounds(int x, int y) {
 		switch (direction) {
 			case RIGHT:
-				Point.setMaxX(currentPoint.getX() - 1);
+				Point.setMaxX(x - 1);
 				break;
 			case UP:
-				Point.setMaxY(currentPoint.getY() - 1);
+				Point.setMaxY(y - 1);
 				break;
 			default:
 				break;
@@ -421,7 +423,7 @@ public class MyAI extends Agent
 	 * If no closest point is found, begins navigating back to the start.
 	 */
 	private Action addAndGoToClosestPoint(Set<Node.Marker> dangers) {
-		currentNode = cave.addNode(currentNode, direction, currentPoint, dangers);
+		cave.addNode(currentPoint, direction, dangers);
 		Point closestPoint = cave.getClosestUnexploredPoint(currentPoint, direction);
 		if (closestPoint == null) {
 			climbOut = true;
