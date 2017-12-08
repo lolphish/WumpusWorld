@@ -12,10 +12,14 @@ import java.util.Stack;
 public class Graph {
 	private Map<Point,Node> nodes; // Map to store points
   	private Set<Point> unexplored;
+  	boolean wumpusFound;
+  	Point wumpusPoint;
 	
 	public Graph() {
 		nodes = new HashMap<>();
       	unexplored = new HashSet<>();
+      	wumpusFound = false;
+      	wumpusPoint = null;
 	}
 	
 	public Graph(Node startingNode) {
@@ -30,6 +34,14 @@ public class Graph {
 		return nodes.size();
 	}
 	
+	public boolean isWumpusFound() {
+		return wumpusFound;
+	}
+	
+	public Point getWumpusPoint() {
+		return wumpusPoint;
+	}
+	
 	/*
 	 * If it doesn't exist, adds a new Node relative to the direction the Agent is facing;
 	 *   returns the node added.
@@ -38,26 +50,29 @@ public class Graph {
 	 *   
 	 * @param destinationPoint - has already been updated to the coordinates of destination
 	 */
-	public Node addNode(Node node, MyAI.Direction direction, Point currentPoint, Set<Node.Marker> dangers) {
+	public void addNode(Point currentPoint, MyAI.Direction direction, Set<Node.Marker> dangers) {
+		Node currentNode = nodes.get(currentPoint);
 		Node destination;
+		
 		// for starting node
-		if (node == null) {
+		if (currentNode == null) {
 			destination = new Node(Node.Marker.EXPLORED);
 			Point copyPoint = new Point(currentPoint);
 			nodes.put(copyPoint, destination);
 		}
-		else if ((destination = getAdjacentNode(node, direction)) == null) {
-			destination = branchDestinationNode(node, direction);
-			
-			// insert a copy of currentPoint into the map;
-			// otherwise its x/y values will update inside the map
-			Point copyPoint = new Point(currentPoint);
-			nodes.put(copyPoint, destination);
+		else {
+			destination = getAdjacentNode(currentNode, direction);
+			if (destination == null) {
+				destination = branchDestinationNode(currentNode, direction);
+				
+				// insert a copy of currentPoint into the map;
+				// otherwise its x/y values will update inside the map
+				Point copyPoint = new Point(currentPoint);
+				nodes.put(copyPoint, destination);	
+			}
 		}
-		destination.addMarker(Node.Marker.EXPLORED);
+		
 		expandUnexploredNeighbors(destination, currentPoint, dangers);
-//		setNeighbors(copyPoint, destination);
-		return destination;
 	}
 	
 	/* Branches a new Node off of origin in direction 'direction'.
@@ -89,41 +104,120 @@ public class Graph {
 		return destination;
 	}
 	
-	/* Expands the immediate unknown neighbors of the argument node/point, marking them as UNEXPLORED.
+	/**
+	 * Expands the immediate neighbors of the argument "point".
+	 * 
+	 * For each immediate neighbor n of "point" p:
+	 *   if n has already been explored:
+	 *     check for hazards (PITWARNING, WUMPUSWARNING)
+	 *     if p is safe, and n is marked as potentially dangerous:
+	 *       then n is safe
+	 *     otherwise:
+	 *       n is guaranteed to be a PIT or WUMPUS
+	 *   
+	 *   else, if n is unknown:
+	 *     add it to the graph
+	 *     if p perceives a hazard, mark n as potentially hazardous
+	 *     otherwise, if p is safe, add n to the set of unexplored, safe nodes
+	 * 
+	 * @param from
+	 * @param point
+	 * @param dangers
 	 */
 	private void expandUnexploredNeighbors(Node from, Point point, Set<Node.Marker> dangers) {
 		for (Map.Entry<MyAI.Direction, Point> entry : getAdjacentDirectionalPoints(point).entrySet()) {
 			MyAI.Direction direction = entry.getKey();
 			Point adjacentPoint = entry.getValue();
+			
+			if (wumpusFound) {
+				dangers.remove(Node.Marker.WUMPUSWARNING);
+			}
 
 			// If the existing node has the same warning before, then it confirms the danger
 			if (nodes.containsKey(adjacentPoint)) {
-				for (Node.Marker marker : dangers) {
-					if (marker == Node.Marker.PITWARNING && nodes.get(adjacentPoint).containsMarker(marker)) {
-						nodes.get(adjacentPoint).addMarker(Node.Marker.PIT);
+				if (!adjacentPoint.outOfBounds()) {
+					Node adjacentNode = nodes.get(adjacentPoint);
+					
+					// a pit has been isolated
+					if (adjacentNode.containsMarker(Node.Marker.PITWARNING)) {
+						if (dangers.contains(Node.Marker.PITWARNING)) {
+							adjacentNode.addMarker(Node.Marker.PIT);
+						}
+						else {
+							adjacentNode.removeMarker(Node.Marker.PITWARNING);
+		                  	if (!adjacentNode.isDangerous()) {
+		                  		unexplored.add(adjacentPoint);	
+		                  	}
+						}
 					}
-					else if (marker == Node.Marker.WUMPUSWARNING && nodes.get(adjacentPoint).containsMarker(marker)) {
-						nodes.get(adjacentPoint).addMarker(Node.Marker.WUMPUS);
+	              	
+	              	// wumpus has been isolated
+					if (adjacentNode.containsMarker(Node.Marker.WUMPUSWARNING)) {
+						if (dangers.contains(Node.Marker.WUMPUSWARNING)) {
+							adjacentNode.addMarker(Node.Marker.WUMPUS);
+		                    removeWumpusWarning();
+		                    wumpusFound = true;
+		                    wumpusPoint = new Point(adjacentPoint);
+		                    dangers.remove(Node.Marker.WUMPUSWARNING);
+		                    // function to delete all WUMPUS WARNINGS AT PLACES NOT WUMPUS
+						}
+						else {
+							adjacentNode.removeMarker(Node.Marker.WUMPUSWARNING);
+		                  	if (!adjacentNode.isDangerous()) {
+		                  		unexplored.add(adjacentPoint);	
+		                  	}
+						}
 					}
 				}
+				
 			}
 			else {
 				Node destination = branchDestinationNode(from, direction);
+				
 				if (adjacentPoint.outOfBounds()) {
 					destination.addMarker(Node.Marker.WALL);
 				}
 				else {
 					destination.addMarker(Node.Marker.UNEXPLORED);
+                  
+                  	// only add nodes that are guaranteed to be safe
 					if (dangers.isEmpty()) {
 						unexplored.add(adjacentPoint);
 					}
+					
+					for (Node.Marker marker : dangers) { // if wumpus is alive after shooting arrow, do not add to current facing direction
+						if (wumpusFound && marker == Node.Marker.WUMPUSWARNING) {
+							continue;
+						}
+						destination.addMarker(marker);
+					}
 				}
-				for (Node.Marker marker : dangers) {
-					destination.addMarker(marker);
-				}
+				
 				nodes.put(adjacentPoint, destination);
 			}
 		}
+	}
+	
+	public Point getAdjacentPoint(Point from, MyAI.Direction direction) {
+		int x = from.getX();
+		int y = from.getY();
+		switch (direction) {
+			case UP:
+				++y;
+				break;
+			case DOWN:
+				--y;
+				break;
+			case RIGHT:
+				++x;
+				break;
+			case LEFT:
+				--x;
+				break;
+			default:
+				throw new WumpusWorldException("unexpected direction");
+		}
+		return new Point(x, y);
 	}
 	
 	/*
@@ -131,7 +225,7 @@ public class Graph {
 	 * For example, if direction = RIGHT, returns from.right
 	 * (the node leading to the from's right neighbor).
 	 */
-	private Node getAdjacentNode(Node from, MyAI.Direction direction) {
+	public Node getAdjacentNode(Node from, MyAI.Direction direction) {
 		Node adjacent;
 		switch (direction) {
 			case UP:
@@ -150,22 +244,6 @@ public class Graph {
 				throw new WumpusWorldException("unexpected direction");
 		}
 		return adjacent;
-	}
-	
-	/*
-	 * Finds if there are possible neighbors in the map and update
-	 * current node point
-	 */
-	private void setNeighbors(Point currentPoint, Node destination)
-	{
-		Point left = new Point(currentPoint.getX()-1, currentPoint.getY());
-		Point right = new Point(currentPoint.getX()+1, currentPoint.getY());
-		Point up = new Point(currentPoint.getX(), currentPoint.getY()+1);
-		Point down = new Point(currentPoint.getX(), currentPoint.getY()-1);
-		destination.setLeft(nodes.get(left));
-		destination.setRight(nodes.get(right));
-		destination.setAbove(nodes.get(up));
-		destination.setBelow(nodes.get(down));
 	}
 	
 	/* Returns a map of ALL POSSIBLE immediate neighbors of 'point' - 
@@ -222,35 +300,131 @@ public class Graph {
 		return nodes.get(point);
 	}
 	
+  	/*
+     * Calculates the amount of extra cost due to turns for a current point
+     * to another. Adds that to heuristic
+     */
+	public static int getTurnHeuristic(Point point1, Point point2, MyAI.Direction direction) {
+		int dX = point1.getX() - point2.getX();
+		int dY = point1.getY() - point2.getY();
+		int cost = 0; // cost of the turning
+    
+		if (dX > 0) {
+			switch (direction) {
+				case RIGHT:
+			  		cost += 2;
+			  		break;
+		        case UP:
+		        case DOWN:
+		        		++cost;
+		        		break;
+		        	default:
+		        		break;
+			}
+		}
+		else if (dX < 0) {
+			switch(direction) {
+				case LEFT:
+					cost += 2;
+					break;
+				case UP:
+				case DOWN:
+					++cost;
+					break;
+				default:
+					break;
+			}
+		}
+		else if (dY > 0) {
+			switch(direction) {
+				case UP:
+					cost += 2;
+					break;
+				case LEFT:
+				case RIGHT:
+					++cost;
+					break;
+				default:
+					break;
+			}
+		}
+		else if(dY < 0) {
+			switch(direction) {
+	  			case DOWN:
+	  				cost += 2;
+	  				break;
+	  			case LEFT:
+	  			case RIGHT:
+	  				++cost;
+	  				break;
+	  			default:
+	  				break;
+			}
+		}
+		return cost;
+	}
+  
 	public static int getManhattanDistance(Point point1, Point point2) {
 		return Math.abs(point1.getX() - point2.getX()) + Math.abs(point1.getY() - point2.getY());
 	}
+
+    /* Returns true if "origin" is facing the same direction as "target"
+     */
+    public static boolean isPointFacing(Point origin, Point target, MyAI.Direction direction) {
+        switch (direction) {
+            case UP:
+                if (origin.getX() == target.getX() && (target.getY() - origin.getY() > 0)) {
+                    return true;
+                }
+                break;
+          	case DOWN:
+                if (origin.getX() == target.getX() && (target.getY() - origin.getY() < 0)) {
+                    return true;
+                }
+                break;
+          	case RIGHT:
+                if (origin.getY() == target.getY() && target.getX() - origin.getX() > 0)
+                    return true;
+                break;
+          	case LEFT:
+          		if (origin.getY() == target.getY() && target.getX() - origin.getX() < 0)
+                    return true;
+          		break;
+        }
+		return false;
+    }
 	
 	/*
-     * Finds closest unexplored node from currentValue
+     * Finds and returns the closest unexplored Point from origin.
      */
-	public Point getClosestUnexploredPoint(Point currentPoint) {
-		Point minPoint = null;
-		int minManhattanDistance = Integer.MAX_VALUE; //getManhattanDistance(currentPoint, minPoint);
+	public Point getClosestUnexploredPoint(Point origin, MyAI.Direction directionPreference) {
+		Point optimal = null;
+		int shortestDistance = Integer.MAX_VALUE;
 		for (Point point : unexplored) {
-			int tempManhattanDistance = getManhattanDistance(currentPoint, point);
-			if (tempManhattanDistance < minManhattanDistance) {
-				minPoint = point;
-				minManhattanDistance = tempManhattanDistance;
+			int distanceFromPoint = getManhattanDistance(origin, point);
+			if (distanceFromPoint < shortestDistance) {
+                // if "point" is in the same Direction relative to "optimal":
+                //     optimal = point
+				optimal = point;
+				shortestDistance = distanceFromPoint;
 			}
+          	else if (distanceFromPoint == shortestDistance && isPointFacing(origin, point, directionPreference)) {
+                optimal = point;
+                shortestDistance = distanceFromPoint;
+            }
 		}
-		unexplored.remove(minPoint);
-		return minPoint;
+		unexplored.remove(optimal);
+		return optimal;
 	}
   
 	/* 
 	 * Performs a greedy best-first search from origin to destination.
 	 * Returns a Stack of Points of the discovered path.
 	 */
-	public Stack<Point> getPath(Point origin, Point destination) {
+	public Stack<Point> getPath(Point origin, Point destination, MyAI.Direction currentDirection) {
 		Stack<Point> result = new Stack<>();
-		Map<Point, Point> parents = new HashMap<>();
-		Comparator<Object> pointComparator = new PointComparator(destination);
+		Map<Point, Point> parents = new HashMap<>();		// map {child: parent}
+		Comparator<Object> pointComparator = new PointComparator(destination, currentDirection);
 		Queue<Point> frontier = new PriorityQueue<Point>(pointComparator);
 	  
 		frontier.add(origin);
@@ -269,7 +443,8 @@ public class Graph {
 		  
 			// TODO: avoid hazards
 			// expand all children of current node
-			for (Point child : getKnownAdjacentPoints(current)) {
+			Set<Point> known = getKnownAdjacentPoints(current);
+			for (Point child : known) {
 				// graph search; ignore already-stepped-on points
 				if (!parents.containsKey(child)) {
 					if (!nodes.get(child).isDangerous()) {
@@ -298,23 +473,57 @@ public class Graph {
 			}
 		}
 	}
-  
-	/* 
-	 * Comparator to order by increasing Manhattan distance (i.e., least to greatest).
+
+	/* Iterates through the graph and removes all WUMPUSWARNING markers.
+	 * Used when the wumpus is killed.
 	 */
-	private class PointComparator implements Comparator<Object> {
-		private Point destination;
-	  
-		public PointComparator(Point destination) {
-			this.destination = destination;
-		}
-		
-		@Override
-		public int compare(Object a1, Object b1) {
-			Point a = (Point)a1;
-			Point b = (Point)b1;
-			return getManhattanDistance(a, destination) - getManhattanDistance(b, destination);
+	public void removeWumpusWarning() {
+		for (Map.Entry<Point, Node> entry : nodes.entrySet()) {
+			Point point = entry.getKey();
+			Node node = entry.getValue();
+			if (node.containsMarker(Node.Marker.WUMPUSWARNING) && !node.containsMarker(Node.Marker.WUMPUS)) {
+				node.removeMarker(Node.Marker.WUMPUSWARNING);
+				
+				if (!node.isDangerous()) {
+					unexplored.add(point);
+				}
+			}
 		}
 	}
+	
+	public void addToUnexplored(Point point) {
+		unexplored.add(point);
+	}
+	
+	public boolean containsPoint(Point point) {
+		return nodes.containsKey(point);
+	}
+      
+  	/* 
+  	 * Comparator to order by increasing Manhattan distance (i.e., least to greatest).
+  	 */
+  	private class PointComparator implements Comparator<Object> {
+  		private Point destination;
+      	private MyAI.Direction direction;
+  	  
+  		public PointComparator(Point destination, MyAI.Direction direction) {
+  			this.destination = destination;
+          	this.direction = direction;
+  		}
+  		
+  		@Override
+  		public int compare(Object a1, Object b1) {
+  			Point a = (Point)a1;
+  			Point b = (Point)b1;
+          
+          	int costA = getTurnHeuristic(a, destination, direction);
+          	int costB = getTurnHeuristic(b, destination, direction);
+          	int estimateA = getManhattanDistance(a, destination);
+          	int estimateB = getManhattanDistance(b, destination);
+  			
+          	return (costA + estimateA) - (costB + estimateB);
+  		}
+  	}
   	
 }
+

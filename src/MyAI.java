@@ -41,26 +41,28 @@ public class MyAI extends Agent
   
 	private Direction direction;
 	private Point currentPoint;
-	private Node currentNode;
+	private Point lastPoint;
 	private Graph cave;
 	private Queue<Action> actions;
 	private boolean hasArrow;
 	private boolean wumpusAlive;
 	private boolean climbOut;
+  	private boolean justShot;
 	
 	public MyAI ( )
 	{
 		// ======================================================================
 		// YOUR CODE BEGINS
 		// ======================================================================
+		Point.defaultMax();
 		currentPoint = Point.getStartingPoint();		// initialized to (1, 1)
-//		currentNode = new Node(Node.Marker.EXPLORED);
-		currentNode = null;
+		lastPoint = null;
 		cave = new Graph();
 		
 		hasArrow = true;
 		wumpusAlive = true;
 		climbOut = false;
+      	justShot = false;
 		
 		actions = new LinkedList<>();
 		direction = Direction.RIGHT;
@@ -83,6 +85,7 @@ public class MyAI extends Agent
 		// ======================================================================
 		if (scream) {
 			wumpusAlive = false;
+			cave.removeWumpusWarning();
 		}
 		
 		if (glitter) {
@@ -103,60 +106,69 @@ public class MyAI extends Agent
 			// moveForward() adds a new node
 			// if a bump is perceived, a new node was added when it shouldn't have been
 			// we can mark this node as a WALL, then update currentPoint to be the node that it came from
-			// TODO: add right/top wall
-			markOutOfBounds();
+			markOutOfBounds(currentPoint.getX(), currentPoint.getY());
 			cave.getNode(currentPoint).addMarker(Node.Marker.WALL);
-			currentPoint = getLocalOriginPoint(currentPoint);
-			
-			// TODO: turn to a valid position
+			currentPoint = new Point(lastPoint);
 		}
       
 		Set<Node.Marker> dangers = new HashSet<>();
+		
+		if (cave.getNode(currentPoint) != null) {
+			cave.getNode(currentPoint).addMarker(Node.Marker.EXPLORED);
+		}
 
 		// if an upcoming action has been queued, prioritize it
 		if (!actions.isEmpty()) {
-			return dequeueAction(dangers);
+			return dequeueAction();
 		}
 		
-		// attempt to kill the Wumpus
 		if (stench && wumpusAlive && hasArrow) {
-//            hasArrow = false;
-//            return Action.SHOOT;
+			hasArrow = false;
+			justShot = true;
+			return Action.SHOOT;	
 		}
 		
 		Action action;
-//		currentNode.addMarker(Node.Marker.EXPLORED);
 		if (breeze || stench) {
-			// TODO: error if a breeze/stench is perceived at the starting point
-			if (currentPoint.atStart()) {
-				// climb out?
-				climbOut = true;
-				return getAction(stench, breeze, glitter, bump, scream);
-			}
-			
-			// TODO: what if a breeze and stench exist on the same point?
-			// after the wumpus dies, the node would no longer be marked WUMPUSWARNING
-			// but might still need to be marked PITWARNING
 			if (breeze) {
+				if (currentPoint.atStart()) {
+					// climb out?
+					climbOut = true;
+					return getAction(stench, breeze, glitter, bump, scream);
+				}
 				dangers.add(Node.Marker.PITWARNING);
 			}
-			if (stench) {
-				dangers.add(Node.Marker.WUMPUSWARNING);
+			if (stench && wumpusAlive) {
+                dangers.add(Node.Marker.WUMPUSWARNING);
 			}
-			action = addAndGoToClosestPoint(dangers);
-//			currentNode = cave.addNode(currentNode, direction, currentPoint, dangers);
-//			Point closestPoint = cave.getClosestUnexploredPoint(currentPoint);
-//			navigate(currentPoint, closestPoint);
-//			action = dequeueAction(dangers);
-		}
-		else {
-			action = addAndGoToClosestPoint(dangers);
-//			currentNode = cave.addNode(currentNode, direction, currentPoint, dangers);
-//			Point closestPoint = cave.getClosestUnexploredPoint(currentPoint);
-//			navigate(currentPoint, closestPoint);
-//			action = dequeueAction(dangers);
 		}
 		
+		cave.addNode(currentPoint, direction, dangers);
+		
+		if (justShot) {
+			// shot, but missed
+			// remove WUMPUSWARNING from the node directly in front of the agent
+			Node currentNode = cave.getNode(currentPoint);
+			Node neighbor = cave.getAdjacentNode(currentNode, direction);
+			if (neighbor != null) {
+				neighbor.removeMarker(Node.Marker.WUMPUSWARNING);
+				Point adjacentPoint = cave.getAdjacentPoint(currentPoint, direction);
+				if (!neighbor.isDangerous()) {
+					cave.addToUnexplored(adjacentPoint);	
+				}
+			}
+		}
+		
+		Point closestPoint = cave.getClosestUnexploredPoint(currentPoint, direction);
+		if (closestPoint == null) {
+			climbOut = true;
+			actions.clear();
+			return getAction(false, false, false, false, false);
+		}
+		navigate(currentPoint, closestPoint);
+		action = dequeueAction();
+      
+		justShot = false;
 		return action;
 		// ======================================================================
 		// YOUR CODE ENDS
@@ -209,7 +221,8 @@ public class MyAI extends Agent
 		return Action.TURN_RIGHT;
 	}
 	
-	private Action moveForward(Set<Node.Marker> dangers) {
+	private Action moveForward() {
+		lastPoint = new Point(currentPoint);
 		switch (direction) {
 			case UP:
 				currentPoint.addY(1);
@@ -230,19 +243,19 @@ public class MyAI extends Agent
 	/* Assumes actions is NOT empty.
 	 * Pops the next Action from the actions queue, and returns it.
 	 */
-	private Action dequeueAction(Set<Node.Marker> dangers) throws NoSuchElementException {
+	private Action dequeueAction() throws NoSuchElementException {
 		Action nextAction = actions.remove();
 		switch (nextAction) {
 			case TURN_LEFT:
-			nextAction = turnLeft();
-			break;
-		case TURN_RIGHT:
-			nextAction = turnRight();
-			break;
-		case FORWARD:
-			nextAction = moveForward(dangers);
-		default:
-			break;
+				nextAction = turnLeft();
+				break;
+			case TURN_RIGHT:
+				nextAction = turnRight();
+				break;
+			case FORWARD:
+				nextAction = moveForward();
+			default:
+				break;
 		}
 		return nextAction;
 	}
@@ -255,7 +268,7 @@ public class MyAI extends Agent
 			return;
 		}
 		switch (currentDirection) {
-				case UP:
+			case UP:
 				switch (targetDirection) {
 					case DOWN:
 						actions.add(Action.TURN_RIGHT);
@@ -347,27 +360,6 @@ public class MyAI extends Agent
 			currentLocationPoint = nextPoint;
 		}
 	}
-	/*
-	 * Helper function for restoring currentPoint after bumping into a wall.
-	 * After perceiving a bump, currentPoint has already been updated to out-of-bounds.
-	 * Returns the valid Point that it came from.
-	 * example: currentPoint = getLocalOriginPoint(currentPoint);
-	 */
-	private Point getLocalOriginPoint(Point point) {
-		Node target = cave.getNode(point);
-		if (target == null) {
-			throw new WumpusWorldException("received null Node target; expected valid");
-		}
-		for (Point adjacentPoint : cave.getKnownAdjacentPoints(point)) {
-			Node adjacentNode = cave.getNode(adjacentPoint);
-			if (adjacentNode.containsMarker(Node.Marker.EXPLORED)) {
-				return adjacentPoint;
-			}
-		}
-		
-		// the wall had no explored neighbors, which should NEVER happen
-		throw new WumpusWorldException("expected exactly 1 valid neighboring node");
-	}
 	
 	/* Marks the unexplored neighbors of the Node at 'point' as HAZARDOUS.
 	 * Called on currentPoint when a stench/breeze is perceived. 
@@ -390,41 +382,31 @@ public class MyAI extends Agent
      * Adds all necessary actions to the actions queue.
 	 */
 	private void navigate(Point origin, Point destination) {
-		Stack<Point> path = cave.getPath(origin, destination);
+		Stack<Point> path = cave.getPath(origin, destination, direction);
 		getActionsFromPoints(path);
 	}
 
-	private void markOutOfBounds() {
+	/* Sets Point.maxX and Point.maxY to their respective arguments.
+	 * Note that Point.maxX and Point.maxY are inclusive bounds.
+	 * But, this method mandates that you pass currentPoint.getX(), .getY() directly.
+	 * Deletes out-of-bounds nodes in the cave.
+	 */
+	private void markOutOfBounds(int x, int y) {
 		switch (direction) {
 			case RIGHT:
-				Point.setMaxX(currentPoint.getX() - 1);
+				Point.setMaxX(x - 1);
 				break;
 			case UP:
-				Point.setMaxY(currentPoint.getY() - 1);
+				Point.setMaxY(y - 1);
 				break;
 			default:
 				break;
 		}
 		cave.deleteOutOfBounds();
 	}
-	
-	/* Convenience method.
-	 * Adds current point, finds the closest point, and returns the first necessary Action to take.
-	 * If no closest point is found, begins navigating back to the start.
-	 */
-	private Action addAndGoToClosestPoint(Set<Node.Marker> dangers) {
-		currentNode = cave.addNode(currentNode, direction, currentPoint, dangers);
-		Point closestPoint = cave.getClosestUnexploredPoint(currentPoint);
-		if (closestPoint == null) {
-			climbOut = true;
-			actions.clear();
-			return getAction(false, false, false, false, false);
-		}
-		navigate(currentPoint, closestPoint);
-		return dequeueAction(dangers);
-	}
 
 	// ======================================================================
 	// YOUR CODE ENDS
 	// ======================================================================
 }
+
